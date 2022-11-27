@@ -1,0 +1,17 @@
+/venv/Scripts/
+/venv/Include/
+/venv/pyvenv.cfg
+/venv/Lib/
+/.idea/.gitignore
+/.gitignore
+/.idea/encodings.xml
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/inspectionProfiles/profiles_settings.xml
+/.idea/telegram_bot.iml
+/.idea/vcs.xml
+/config.json
+/CurseWords.txt
+/goodbye.txt
+/hello1.txt
+/hello2.txt
