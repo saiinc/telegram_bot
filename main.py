@@ -234,6 +234,17 @@ async def forward(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.forward(admin2_pm)
 
 
+# Define a few command handlers. These usually take the two arguments update and
+# context.
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Send a message when the command /start is issued."""
+    user = update.effective_user
+    await update.message.reply_html(
+        rf"Привет! {user.mention_html()}!",
+        reply_markup=ForceReply(selective=True),
+    )
+
+
 async def moderation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Checks chat messages for unacceptable content."""
     try:
@@ -283,7 +294,12 @@ def main() -> None:
 
     # Forward the pm messages on Telegram
     application.add_handler(MessageHandler(filters.ChatType.PRIVATE, forward))
+
+    # Moderating chats
     application.add_handler(MessageHandler(filters.ChatType.GROUPS, moderation))
+
+    # on different commands - answer in Telegram
+    application.add_handler(CommandHandler("start", start))
 
     # Run the bot until the user presses Ctrl-C
     # We pass 'allowed_updates' handle *all* updates including `chat_member` updates
