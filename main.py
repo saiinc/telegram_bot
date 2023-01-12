@@ -95,14 +95,17 @@ test_chat2 = config.get('test_chat2')
 
 
 hf1 = open('hello1.txt', 'r', encoding='utf-8')
-hello_msg1 = ''.join(hf1.readlines()).split('{member_name}')
+hello_msg1 = hf1.read()
 hf1.close()
 hf2 = open('hello2.txt', 'r', encoding='utf-8')
-hello_msg2 = ''.join(hf2.readlines()).split('{member_name}')
+hello_msg2 = hf2.read()
 hf2.close()
 gf = open('goodbye.txt', 'r', encoding='utf-8')
 lynx_ruc = ''.join(gf.readlines()).split('\n')
 gf.close()
+sf = open('start.txt', 'r', encoding='utf-8')
+start_msg = sf.read()
+sf.close()
 
 
 def extract_status_change(chat_member_update: ChatMemberUpdated) -> Optional[Tuple[bool, bool]]:
@@ -214,12 +217,12 @@ async def greet_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     if not was_member and is_member:
         await update.effective_chat.send_message(
-            hello_msg1[0] + member_name + hello_msg1[1],
+            hello_msg1.format(member_name=member_name),
             parse_mode=ParseMode.HTML,
         )
         time.sleep(10)
         await update.effective_chat.send_message(
-            member_name + hello_msg2[1],
+            hello_msg2.format(member_name=member_name),
             parse_mode=ParseMode.HTML,
         )
     elif was_member and not is_member:
@@ -238,9 +241,9 @@ async def forward(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 # context.
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
-    user = update.effective_user
+    # user = update.effective_user
     await update.message.reply_html(
-        rf"Привет! {user.mention_html()}!",
+        start_msg,
         reply_markup=ForceReply(selective=True),
     )
 
@@ -292,14 +295,14 @@ def main() -> None:
     # Handle members joining/leaving chats.
     application.add_handler(ChatMemberHandler(greet_chat_members, ChatMemberHandler.CHAT_MEMBER))
 
+    # on different commands - answer in Telegram
+    application.add_handler(CommandHandler("start", start))
+
     # Forward the pm messages on Telegram
     application.add_handler(MessageHandler(filters.ChatType.PRIVATE, forward))
 
     # Moderating chats
     application.add_handler(MessageHandler(filters.ChatType.GROUPS, moderation))
-
-    # on different commands - answer in Telegram
-    application.add_handler(CommandHandler("start", start))
 
     # Run the bot until the user presses Ctrl-C
     # We pass 'allowed_updates' handle *all* updates including `chat_member` updates
