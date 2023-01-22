@@ -10,6 +10,7 @@ Press Ctrl-C on the command line or send a signal to the process to stop the
 bot.
 """
 
+import os
 import logging
 from typing import Optional, Tuple
 
@@ -81,18 +82,16 @@ CWF = open('CurseWords.txt', 'r', encoding='utf-8')
 CurseWords = ''.join(CWF.readlines()).split('\n')
 CWF.close()
 
-
 # reading the settings from the file
-with open('config.json') as cf:
+with open('config.json', 'r', encoding='utf-8') as cf:
     js = cf.read()
     cf.close()
 config = json.loads(js)
 telegram_token = config.get('telegram_token')
-admin1_pm = config.get('admin1_pm')
-admin2_pm = config.get('admin2_pm')
-test_chat1 = config.get('test_chat1')
-test_chat2 = config.get('test_chat2')
-
+forward_pm = config.get('forward_pm')
+random_fun_keyword = config.get('random_fun_keyword')
+helper_keyword = config.get('helper_keyword')
+admins = config.get('admins')
 
 hf1 = open('hello1.txt', 'r', encoding='utf-8')
 hello_msg1 = hf1.read()
@@ -101,11 +100,26 @@ hf2 = open('hello2.txt', 'r', encoding='utf-8')
 hello_msg2 = hf2.read()
 hf2.close()
 gf = open('goodbye.txt', 'r', encoding='utf-8')
-lynx_ruc = ''.join(gf.readlines()).split('\n')
+goodbye_msgs = ''.join(gf.readlines()).split('\n')
 gf.close()
 sf = open('start.txt', 'r', encoding='utf-8')
 start_msg = sf.read()
 sf.close()
+prf = open('Ping_rand.txt', 'r', encoding='utf-8')
+random_msgs = ''.join(prf.readlines()).split('\n')
+prf.close()
+rpf = open('Rand_Pervoe.txt', 'r', encoding='utf-8')
+rand_helper = ''.join(rpf.readlines()).split('\n')
+rpf.close()
+
+helper_list = []
+for root, dirs, files in os.walk('helper'):
+    for filename in files:
+        with open('helper/' + filename, 'r', encoding="utf-8") as helperf:
+            js_h = helperf.read()
+            helperf.close()
+        helper_ent = json.loads(js_h, strict=False)
+        helper_list.append(helper_ent)
 
 
 def extract_status_change(chat_member_update: ChatMemberUpdated) -> Optional[Tuple[bool, bool]]:
@@ -227,14 +241,14 @@ async def greet_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
     elif was_member and not is_member:
         await update.effective_chat.send_message(
-            f"{random.choice(lynx_ruc)}",
+            f"{random.choice(goodbye_msgs)}",
             parse_mode=ParseMode.HTML,
         )
 
 
 async def forward(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Forward the user message."""
-    await update.message.forward(admin2_pm)
+    await update.message.forward(forward_pm)
 
 
 # Define a few command handlers. These usually take the two arguments update and
@@ -244,7 +258,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # user = update.effective_user
     await update.message.reply_html(
         start_msg,
-        reply_markup=ForceReply(selective=True),
+        # reply_markup=ForceReply(selective=True),
     )
 
 
@@ -268,16 +282,38 @@ async def moderation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             result_word = filter_word(tested_text)
             if result_word is not False:
                 if update.message is not None:
-                    await update.message.forward(admin1_pm)
-                    await update.message.forward(admin2_pm)
-                    if update.message.chat_id == test_chat1 or update.message.chat_id == test_chat2:
-                        await update.message.reply_text(result_word)
+                    for key in admins:
+                        await update.message.forward(admins[key])
+                        await context.bot.send_message(chat_id=admins[key], text=result_word, parse_mode=ParseMode.HTML)
                 elif update.edited_message is not None:
-                    await update.edited_message.forward(admin1_pm)
-                    await update.edited_message.forward(admin2_pm)
-                    if update.edited_message.chat_id == test_chat1 or update.edited_message.chat_id == test_chat2:
-                        await update.message.reply_text(result_word)
+                    for key in admins:
+                        await update.edited_message.forward(admins[key])
+                        await context.bot.send_message(chat_id=admins[key], text=result_word, parse_mode=ParseMode.HTML)
 
+    except AttributeError:
+        print(AttributeError.args)
+        print(update)
+
+
+async def random_fun(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_html(
+        f'{random.choice(random_msgs)}')
+
+
+async def helper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    try:
+        for helper_entity in helper_list:
+            if helper_entity['command'] == update.message.text:
+                if helper_entity['delay'] == 'Yes':
+                    await update.message.reply_html(
+                        f'{random.choice(rand_helper)}')
+                    time.sleep(10)
+                await update.message.reply_html(
+                    helper_entity['content'],
+                    # reply_markup=ForceReply(selective=True),
+                )
+                return
+        await moderation(update, context)
     except AttributeError:
         print(AttributeError.args)
         print(update)
@@ -296,10 +332,16 @@ def main() -> None:
     application.add_handler(ChatMemberHandler(greet_chat_members, ChatMemberHandler.CHAT_MEMBER))
 
     # on different commands - answer in Telegram
-    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("start", start, filters.ChatType.PRIVATE))
 
     # Forward the pm messages on Telegram
     application.add_handler(MessageHandler(filters.ChatType.PRIVATE, forward))
+
+    # Random fun messages
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(random_fun_keyword), random_fun))
+
+    # Chat content request
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(helper_keyword), helper))
 
     # Moderating chats
     application.add_handler(MessageHandler(filters.ChatType.GROUPS, moderation))
