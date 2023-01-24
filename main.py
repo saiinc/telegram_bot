@@ -74,7 +74,7 @@ dict_re = {
     'э': '[э|e]',
     'ю': '[ю|y|u]',
     'я': '[я|r]',
-    ' ': '[.|,|!|?|&|)|(|\\|\/|*|-|_|"|\'|;|®]'
+    # ' ': '[.|,|!|?|&|)|(|\\|\/|*|-|_|"|\'|;|®]'
 }
 # Регулярки для замены похожих букв и символов на русские
 
@@ -296,24 +296,28 @@ async def moderation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 
 async def random_fun(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_html(
-        f'{random.choice(random_msgs)}')
+    if update.message is not None:
+        await update.message.reply_html(
+            f'{random.choice(random_msgs)}')
 
 
 async def helper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
-        for helper_entity in helper_list:
-            if helper_entity['command'] == update.message.text:
-                if helper_entity['delay'] == 'Yes':
+        if update.message is not None:
+            for helper_entity in helper_list:
+                keyword = update.message.text
+                keyword = replace_letters(keyword)
+                if helper_entity['command'] == keyword:
+                    if helper_entity['delay'] == 'Yes':
+                        await update.message.reply_html(
+                            f'{random.choice(rand_helper)}')
+                        time.sleep(10)
                     await update.message.reply_html(
-                        f'{random.choice(rand_helper)}')
-                    time.sleep(10)
-                await update.message.reply_html(
-                    helper_entity['content'],
-                    # reply_markup=ForceReply(selective=True),
-                )
-                return
-        await moderation(update, context)
+                        helper_entity['content'],
+                        # reply_markup=ForceReply(selective=True),
+                    )
+                    return
+            await moderation(update, context)
     except AttributeError:
         print(AttributeError.args)
         print(update)
