@@ -364,8 +364,8 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(helper_keyword), helper))
 
     # Moderating chats
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.TEXT & (~filters.CAPTION), moderation_msg))
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.EDITED_MESSAGE & filters.TEXT & (~filters.CAPTION), moderation_edited_msg))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.TEXT, moderation_msg))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.EDITED_MESSAGE & filters.TEXT, moderation_edited_msg))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.CAPTION, moderation_caption))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.EDITED_MESSAGE & filters.CAPTION, moderation_edited_caption))
 
