@@ -79,7 +79,7 @@ dict_re = {
 # Регулярки для замены похожих букв и символов на русские
 
 CWF = open('CurseWords.txt', 'r', encoding='utf-8')
-CurseWords = ''.join(CWF.readlines()).split('\n')
+CurseWords = list(filter(None, CWF.read().split('\n')))
 CWF.close()
 
 # reading the settings from the file
@@ -100,16 +100,16 @@ hf2 = open('hello2.txt', 'r', encoding='utf-8')
 hello_msg2 = hf2.read()
 hf2.close()
 gf = open('goodbye.txt', 'r', encoding='utf-8')
-goodbye_msgs = ''.join(gf.readlines()).split('\n')
+goodbye_msgs = list(filter(None, gf.read().split('\n')))
 gf.close()
 sf = open('start.txt', 'r', encoding='utf-8')
 start_msg = sf.read()
 sf.close()
 prf = open('Ping_rand.txt', 'r', encoding='utf-8')
-random_msgs = ''.join(prf.readlines()).split('\n')
+random_msgs = list(filter(None, prf.read().split('\n')))
 prf.close()
 rpf = open('Rand_Pervoe.txt', 'r', encoding='utf-8')
-rand_helper = ''.join(rpf.readlines()).split('\n')
+rand_helper = list(filter(None, rpf.read().split('\n')))
 rpf.close()
 
 helper_list = []
@@ -118,8 +118,12 @@ for root, dirs, files in os.walk('helper'):
         with open('helper/' + filename, 'r', encoding="utf-8") as helperf:
             js_h = helperf.read()
             helperf.close()
-        helper_ent = json.loads(js_h, strict=False)
-        helper_list.append(helper_ent)
+        try:
+            helper_ent = json.loads(js_h, strict=False)
+            helper_list.append(helper_ent)
+        except json.decoder.JSONDecodeError:
+            print(json.decoder.JSONDecodeError)
+            print(js_h)
 
 
 def extract_status_change(chat_member_update: ChatMemberUpdated) -> Optional[Tuple[bool, bool]]:
@@ -164,8 +168,7 @@ def filter_word(msg):
         for word in CurseWords:
             b = fuzz.token_sort_ratio(word, w)  # Проверяю сходство слов из списка
             if b >= 85:
-                logger.info(f"{w} | {b}% Матерное слово {word}")
-                return f"{w} | {b}% Матерное слово {word}"
+                return f"{w} | {b}% Слово-триггер: {word}"
             else:
                 pass
     return False
@@ -262,37 +265,50 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
-async def moderation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def moderation_msg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Checks chat messages for unacceptable content."""
-    try:
-        tested_text = ""
-        if update.message is not None:
-            if update.message.text is not None:
-                tested_text = update.message.text
-            elif update.message.caption is not None:
-                tested_text = update.message.caption
-        elif update.edited_message is not None:
-            if update.edited_message.text is not None:
-                tested_text = update.edited_message.text
-            elif update.edited_message.caption is not None:
-                tested_text = update.edited_message.caption
-        else:
-            print(update)
-        if tested_text:
-            result_word = filter_word(tested_text)
-            if result_word is not False:
-                if update.message is not None:
-                    for key in admins:
-                        await update.message.forward(admins[key])
-                        await context.bot.send_message(chat_id=admins[key], text=result_word, parse_mode=ParseMode.HTML)
-                elif update.edited_message is not None:
-                    for key in admins:
-                        await update.edited_message.forward(admins[key])
-                        await context.bot.send_message(chat_id=admins[key], text=result_word, parse_mode=ParseMode.HTML)
+    result_word = filter_word(update.message.text)
+    if result_word is not False:
+        logger.info(
+            f"{result_word}, moderation_msg, message_id = {update.message.message_id}, "
+            f"user_id = {update.message.from_user.id}, chat_id = {update.message.chat.id}")
+        for key in admins:
+            await update.message.forward(admins[key])
+            await context.bot.send_message(chat_id=admins[key], text=result_word, parse_mode=ParseMode.HTML)
 
-    except AttributeError:
-        print(AttributeError.args)
-        print(update)
+
+async def moderation_caption(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Checks chat messages for unacceptable content."""
+    result_word = filter_word(update.message.caption)
+    if result_word is not False:
+        logger.info(
+            f"{result_word}, moderation_caption, message_id = {update.message.message_id}, "
+            f"user_id = {update.message.from_user.id}, chat_id = {update.message.chat.id}")
+        for key in admins:
+            await update.message.forward(admins[key])
+            await context.bot.send_message(chat_id=admins[key], text=result_word, parse_mode=ParseMode.HTML)
+
+
+async def moderation_edited_msg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Checks chat messages for unacceptable content."""
+    result_word = filter_word(update.edited_message.text)
+    if result_word is not False:
+        logger.info(f"{result_word}, moderation_edited_msg, message_id = {update.edited_message.message_id}, "
+                    f"user_id = {update.edited_message.from_user.id}, chat_id = {update.edited_message.chat.id}")
+        for key in admins:
+            await update.edited_message.forward(admins[key])
+            await context.bot.send_message(chat_id=admins[key], text=result_word, parse_mode=ParseMode.HTML)
+
+
+async def moderation_edited_caption(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Checks chat messages for unacceptable content."""
+    result_word = filter_word(update.edited_message.caption)
+    if result_word is not False:
+        logger.info(f"{result_word}, moderation_edited_caption, message_id = {update.edited_message.message_id}, "
+                    f"user_id = {update.edited_message.from_user.id}, chat_id = {update.edited_message.chat.id}")
+        for key in admins:
+            await update.edited_message.forward(admins[key])
+            await context.bot.send_message(chat_id=admins[key], text=result_word, parse_mode=ParseMode.HTML)
 
 
 async def random_fun(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -317,7 +333,7 @@ async def helper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                         # reply_markup=ForceReply(selective=True),
                     )
                     return
-            await moderation(update, context)
+            await moderation_msg(update, context)
     except AttributeError:
         print(AttributeError.args)
         print(update)
@@ -348,7 +364,10 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(helper_keyword), helper))
 
     # Moderating chats
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS, moderation))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & (~filters.CAPTION), moderation_msg))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.EDITED_MESSAGE & (~filters.CAPTION), moderation_edited_msg))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.CAPTION, moderation_caption))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.EDITED_MESSAGE & filters.CAPTION, moderation_edited_caption))
 
     # Run the bot until the user presses Ctrl-C
     # We pass 'allowed_updates' handle *all* updates including `chat_member` updates
