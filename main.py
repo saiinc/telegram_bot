@@ -297,7 +297,7 @@ async def moderation_edited_msg(update: Update, context: ContextTypes.DEFAULT_TY
                     f"user_id = {update.edited_message.from_user.id}, chat_id = {update.edited_message.chat.id}")
         for key in admins:
             await update.edited_message.forward(admins[key])
-            await context.bot.send_message(chat_id=admins[key], text=result_word, parse_mode=ParseMode.HTML)
+            await context.bot.send_message(chat_id=admins[key], text=f"{result_word}, сообщение отредактировано", parse_mode=ParseMode.HTML)
 
 
 async def moderation_edited_caption(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -308,7 +308,7 @@ async def moderation_edited_caption(update: Update, context: ContextTypes.DEFAUL
                     f"user_id = {update.edited_message.from_user.id}, chat_id = {update.edited_message.chat.id}")
         for key in admins:
             await update.edited_message.forward(admins[key])
-            await context.bot.send_message(chat_id=admins[key], text=result_word, parse_mode=ParseMode.HTML)
+            await context.bot.send_message(chat_id=admins[key], text=f"{result_word}, сообщение отредактировано", parse_mode=ParseMode.HTML)
 
 
 async def random_fun(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
