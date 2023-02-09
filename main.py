@@ -27,7 +27,7 @@ if __version_info__ < (20, 0, 0, "alpha", 1):
         f"{TG_VER} version of this example, "
         f"visit https://docs.python-telegram-bot.org/en/v{TG_VER}/examples.html"
     )
-from telegram import Chat, ChatMember, ChatMemberUpdated, Update, ForceReply
+from telegram import Chat, ChatMember, ChatMemberUpdated, Update
 from telegram.constants import ParseMode
 from telegram.ext import Application, ChatMemberHandler, CommandHandler, ContextTypes, MessageHandler, filters
 import time
@@ -42,6 +42,8 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
+
+
 dict_re = {
     'а': '[@|а|а́|a]',
     'б': '[б|6|b]',
@@ -82,6 +84,7 @@ CWF = open('CurseWords.txt', 'r', encoding='utf-8')
 CurseWords = list(filter(None, CWF.read().split('\n')))
 CWF.close()
 
+
 # reading the settings from the file
 with open('config.json', 'r', encoding='utf-8') as cf:
     js = cf.read()
@@ -92,10 +95,15 @@ forward_pm = config.get('forward_pm')
 random_fun_keyword = config.get('random_fun_keyword')
 helper_keyword = config.get('helper_keyword')
 admins = config.get('admins')
+hello_message_change_keyword = config.get('hello_message_change_keyword')
+switch_command1 = config.get('switch1_state')
 
 hf1 = open('hello1.txt', 'r', encoding='utf-8')
 hello_msg1 = hf1.read()
 hf1.close()
+hf1_1 = open('hello1_1.txt', 'r', encoding='utf-8')
+hello_msg1_1 = hf1_1.read()
+hf1_1.close()
 hf2 = open('hello2.txt', 'r', encoding='utf-8')
 hello_msg2 = hf2.read()
 hf2.close()
@@ -233,10 +241,16 @@ async def greet_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE)
     member_name = update.chat_member.new_chat_member.user.mention_html()
 
     if not was_member and is_member:
-        await update.effective_chat.send_message(
-            hello_msg1.format(member_name=member_name),
-            parse_mode=ParseMode.HTML,
-        )
+        if switch_command1 is True:
+            await update.effective_chat.send_message(
+                hello_msg1_1.format(member_name=member_name),
+                parse_mode=ParseMode.HTML,
+            )
+        else:
+            await update.effective_chat.send_message(
+                hello_msg1.format(member_name=member_name),
+                parse_mode=ParseMode.HTML,
+            )
         time.sleep(10)
         await update.effective_chat.send_message(
             hello_msg2.format(member_name=member_name),
@@ -294,7 +308,8 @@ async def moderation_edited_msg(update: Update, context: ContextTypes.DEFAULT_TY
     result_word = filter_word(update.edited_message.text)
     if result_word is not False:
         logger.info(f"{result_word}, moderation_edited_msg, message_id = {update.edited_message.message_id}, "
-                    f"user_id = {update.edited_message.from_user.id}, chat_id = {update.edited_message.chat.id}")
+                    f"user_id = {update.edited_message.from_user.id}, chat_id = {update.edited_message.chat.id}, "
+                    f"message_text = {update.edited_message.text}")
         for key in admins:
             await update.edited_message.forward(admins[key])
             await context.bot.send_message(chat_id=admins[key], text=f"{result_word}, сообщение отредактировано", parse_mode=ParseMode.HTML)
@@ -315,6 +330,38 @@ async def random_fun(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     if update.message is not None:
         await update.message.reply_html(
             f'{random.choice(random_msgs)}')
+
+
+async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    userid = update.message.from_user.id
+    member = await update.message.chat.get_member(userid)
+    if member.status == 'administrator' or member.status == 'creator':
+        global switch_command1
+        message = update.message.text
+        if re.search('on$', message) and switch_command1 is False:
+            await update.effective_chat.send_message(
+                    'Спойлеры запрещены!',
+                    parse_mode=ParseMode.HTML,
+                )
+            switch_command1 = True
+            config['switch1_state'] = True
+            json_object = json.dumps(config, ensure_ascii=False, indent=4)
+            with open("config.json", "w", encoding='utf-8') as outfile:
+                outfile.write(json_object)
+                outfile.close()
+        if re.search('off$', message) and switch_command1 is True:
+            await update.effective_chat.send_message(
+                    'Спойлеры разрешены!',
+                    parse_mode=ParseMode.HTML,
+                )
+            switch_command1 = False
+            config['switch1_state'] = False
+            json_object = json.dumps(config, ensure_ascii=False, indent=4)
+            with open("config.json", "w", encoding='utf-8') as outfile:
+                outfile.write(json_object)
+                outfile.close()
+    else:
+        await update.message.reply_html('Нет прав на эту команду!')
 
 
 async def helper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -356,6 +403,8 @@ def main() -> None:
 
     # Forward the pm messages on Telegram
     application.add_handler(MessageHandler(filters.ChatType.PRIVATE, forward))
+
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(hello_message_change_keyword), adm_chat_commands))
 
     # Random fun messages
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(random_fun_keyword), random_fun))
