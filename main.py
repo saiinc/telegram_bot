@@ -240,22 +240,24 @@ async def greet_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE)
     cause_name = update.chat_member.from_user.mention_html()
     member_name = update.chat_member.new_chat_member.user.mention_html()
 
+    chat = await context.bot.getChat(update.effective_chat.id)
     if not was_member and is_member:
-        if switch_command1 is True:
+        if chat.permissions.can_send_messages:
+            if switch_command1 is True:
+                await update.effective_chat.send_message(
+                    hello_msg1_1.format(member_name=member_name),
+                    parse_mode=ParseMode.HTML,
+                )
+            else:
+                await update.effective_chat.send_message(
+                    hello_msg1.format(member_name=member_name),
+                    parse_mode=ParseMode.HTML,
+                )
+            time.sleep(10)
             await update.effective_chat.send_message(
-                hello_msg1_1.format(member_name=member_name),
+                hello_msg2.format(member_name=member_name),
                 parse_mode=ParseMode.HTML,
             )
-        else:
-            await update.effective_chat.send_message(
-                hello_msg1.format(member_name=member_name),
-                parse_mode=ParseMode.HTML,
-            )
-        time.sleep(10)
-        await update.effective_chat.send_message(
-            hello_msg2.format(member_name=member_name),
-            parse_mode=ParseMode.HTML,
-        )
     elif was_member and not is_member:
         await update.effective_chat.send_message(
             f"{random.choice(goodbye_msgs)}",
@@ -306,6 +308,10 @@ async def moderation_caption(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def moderation_edited_msg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Checks chat messages for unacceptable content."""
     result_word = filter_word(update.edited_message.text)
+    logger.info(f"{result_word}, moderation_edited_msg, message_id = {update.edited_message.message_id}, "
+                f"user_id = {update.edited_message.from_user.id}, chat_id = {update.edited_message.chat.id}, "
+                f"message_text = {update.edited_message.text}")
+
     if result_word is not False:
         logger.info(f"{result_word}, moderation_edited_msg, message_id = {update.edited_message.message_id}, "
                     f"user_id = {update.edited_message.from_user.id}, chat_id = {update.edited_message.chat.id}, "
