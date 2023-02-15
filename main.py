@@ -175,7 +175,7 @@ def filter_word(msg):
         w = replace_letters(w)
         for word in CurseWords:
             b = fuzz.token_sort_ratio(word, w)  # Проверяю сходство слов из списка
-            if b >= 85:
+            if b >= 87:
                 return f"{w} | {b}% Слово-триггер: {word}"
             else:
                 pass
@@ -341,10 +341,13 @@ async def random_fun(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     userid = update.message.from_user.id
     member = await update.message.chat.get_member(userid)
-    if member.status == 'administrator' or member.status == 'creator':
+    anon = None
+    if update.message.sender_chat is not None:
+        anon = update.message.sender_chat.id
+    if member.status == 'administrator' or member.status == 'creator' or anon == update.message.chat.id:
         global switch_command1
         message = update.message.text
-        if re.search('on$', message) and switch_command1 is False:
+        if re.search('off$', message) and switch_command1 is False:
             await update.effective_chat.send_message(
                     'Спойлеры запрещены!',
                     parse_mode=ParseMode.HTML,
@@ -355,7 +358,7 @@ async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             with open("config.json", "w", encoding='utf-8') as outfile:
                 outfile.write(json_object)
                 outfile.close()
-        if re.search('off$', message) and switch_command1 is True:
+        if re.search('on$', message) and switch_command1 is True:
             await update.effective_chat.send_message(
                     'Спойлеры разрешены!',
                     parse_mode=ParseMode.HTML,
