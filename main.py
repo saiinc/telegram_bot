@@ -282,6 +282,27 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def moderation_msg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Checks channel comments for spam urls."""
+    message_entities = update.message.entities
+    if update.message.reply_to_message is not None:
+        if update.message.reply_to_message.is_automatic_forward is not None:
+            if update.message.reply_to_message.is_automatic_forward is True:
+                for message_entity in message_entities:
+                    if message_entity.type == 'url' or message_entity.type == 'text_link':
+                        break
+                else:
+                    userid = update.message.from_user.id
+                    member = await update.message.chat.get_member(userid)
+                    anon = None
+                    if update.message.sender_chat is not None:
+                        anon = update.message.sender_chat.id
+                    if member.status != 'administrator' and member.status != 'creator' and anon != update.message.chat.id:
+                        for key in admins:
+                            await context.bot.send_message(chat_id=admins[key], text='URL or text_link', parse_mode=ParseMode.HTML)
+                            await update.message.forward(admins[key])
+                        await context.bot.deleteMessage(update.message.chat.id, update.message.message_id)
+                        return
+
     """Checks chat messages for unacceptable content."""
     result_word = filter_word(update.message.text)
     if result_word is not False:
