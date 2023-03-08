@@ -108,9 +108,6 @@ hf1.close()
 hf1_1 = open('hello1_1.txt', 'r', encoding='utf-8')
 hello_msg1_1 = hf1_1.read()
 hf1_1.close()
-hf2 = open('hello2.txt', 'r', encoding='utf-8')
-hello_msg2 = hf2.read()
-hf2.close()
 gf = open('goodbye.txt', 'r', encoding='utf-8')
 goodbye_msgs = list(filter(None, gf.read().split('\n')))
 gf.close()
@@ -195,6 +192,33 @@ def filter_word(msg):
     return False
 
 
+async def antispam(msg, context):
+    message_entities = None
+
+    if msg.entities is not None and len(msg.entities) > 0:
+        message_entities = msg.entities
+    elif msg.caption_entities is not None:
+        message_entities = msg.caption_entities
+
+    if msg.reply_to_message is not None:
+        if msg.reply_to_message.is_automatic_forward is not None:
+            if msg.reply_to_message.is_automatic_forward is True:
+                for message_entity in message_entities:
+                    if message_entity.type == 'url' or message_entity.type == 'text_link':
+                        userid = msg.from_user.id
+                        member = await msg.chat.get_member(userid)
+                        anon = None
+                        if msg.sender_chat is not None:
+                            anon = msg.sender_chat.id
+                        if member.status != 'administrator' and member.status != 'creator' and anon != msg.chat.id:
+                            for key in admins:
+                                await context.bot.send_message(chat_id=admins[key], text='URL or text_link',
+                                                               parse_mode=ParseMode.HTML)
+                                await msg.forward(admins[key])
+                            await context.bot.deleteMessage(msg.chat.id, msg.message_id)
+                            return
+
+
 async def track_chats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Tracks the chats the bot is in."""
     result = extract_status_change(update.my_chat_member)
@@ -266,11 +290,6 @@ async def greet_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE)
                     hello_msg1.format(member_name=member_name),
                     parse_mode=ParseMode.HTML,
                 )
-            time.sleep(10)
-            await update.effective_chat.send_message(
-                hello_msg2.format(member_name=member_name),
-                parse_mode=ParseMode.HTML,
-            )
     elif was_member and not is_member:
         await update.effective_chat.send_message(
             f"{random.choice(goodbye_msgs)}",
@@ -296,24 +315,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def moderation_msg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Checks channel comments for spam urls."""
-    logger.info(update.message)
-    message_entities = update.message.entities
-    if update.message.reply_to_message is not None:
-        if update.message.reply_to_message.is_automatic_forward is not None:
-            if update.message.reply_to_message.is_automatic_forward is True:
-                for message_entity in message_entities:
-                    if message_entity.type == 'url' or message_entity.type == 'text_link':
-                        userid = update.message.from_user.id
-                        member = await update.message.chat.get_member(userid)
-                        anon = None
-                        if update.message.sender_chat is not None:
-                            anon = update.message.sender_chat.id
-                        if member.status != 'administrator' and member.status != 'creator' and anon != update.message.chat.id:
-                            for key in admins:
-                                await context.bot.send_message(chat_id=admins[key], text='URL or text_link', parse_mode=ParseMode.HTML)
-                                await update.message.forward(admins[key])
-                            await context.bot.deleteMessage(update.message.chat.id, update.message.message_id)
-                            return
+    await antispam(update.message, context)
 
     """Checks chat messages for unacceptable content."""
     result_word = filter_word(update.message.text)
@@ -327,6 +329,9 @@ async def moderation_msg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 
 async def moderation_caption(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Checks channel comments for spam urls."""
+    await antispam(update.message, context)
+
     """Checks chat messages for unacceptable content."""
     result_word = filter_word(update.message.caption)
     if result_word is not False:
@@ -339,6 +344,9 @@ async def moderation_caption(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 async def moderation_edited_msg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Checks channel comments for spam urls."""
+    await antispam(update.edited_message, context)
+
     """Checks chat messages for unacceptable content."""
     result_word = filter_word(update.edited_message.text)
     logger.info(f"{result_word}, moderation_edited_msg, message_id = {update.edited_message.message_id}, "
@@ -355,6 +363,9 @@ async def moderation_edited_msg(update: Update, context: ContextTypes.DEFAULT_TY
 
 
 async def moderation_edited_caption(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Checks channel comments for spam urls."""
+    await antispam(update.edited_message, context)
+
     """Checks chat messages for unacceptable content."""
     result_word = filter_word(update.edited_message.caption)
     if result_word is not False:
