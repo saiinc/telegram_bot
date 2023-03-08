@@ -84,6 +84,10 @@ CWF = open('CurseWords.txt', 'r', encoding='utf-8')
 CurseWords = list(filter(None, CWF.read().split('\n')))
 CWF.close()
 
+PWF = open('PingWords.txt', 'r', encoding='utf-8')
+PingWords = list(filter(None, PWF.read().split('\n')))
+PWF.close()
+
 
 # reading the settings from the file
 with open('config.json', 'r', encoding='utf-8') as cf:
@@ -173,6 +177,15 @@ def filter_word(msg):
         w = ''.join([w[i] for i in range(len(w) - 1) if w[i + 1] != w[i]] + [
             w[-1]]).lower()  # Здесь убираю символы которые повторяються "Приииииивет" -> "Привет"
         w = replace_letters(w)
+
+        '''admin trigger words'''
+        for word in PingWords:
+            b = fuzz.token_sort_ratio(word, w)  # Проверяю сходство слов из списка
+            if b >= 100:
+                return f"{w} | {b}% Слово-триггер: {word}"
+            else:
+                pass
+
         for word in CurseWords:
             b = fuzz.token_sort_ratio(word, w)  # Проверяю сходство слов из списка
             if b >= 87:
