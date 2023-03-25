@@ -99,8 +99,7 @@ forward_pm = config.get('forward_pm')
 random_fun_keyword = config.get('random_fun_keyword')
 helper_keyword = config.get('helper_keyword')
 admins = config.get('admins')
-hello_message_change_keyword = config.get('hello_message_change_keyword')
-switch_command1 = config.get('switch1_state')
+admin_command_start = config.get('admin_command_start')
 
 hf1 = open('hello1.txt', 'r', encoding='utf-8')
 hello_msg1 = hf1.read()
@@ -133,6 +132,13 @@ for root, dirs, files in os.walk('helper'):
         except json.decoder.JSONDecodeError:
             print(json.decoder.JSONDecodeError)
             print(js_h)
+
+
+def config_writer():
+    json_object = json.dumps(config, ensure_ascii=False, indent=4)
+    with open("config.json", "w", encoding='utf-8') as outfile:
+        outfile.write(json_object)
+        outfile.close()
 
 
 def extract_status_change(chat_member_update: ChatMemberUpdated) -> Optional[Tuple[bool, bool]]:
@@ -280,21 +286,23 @@ async def greet_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE)
     chat = await context.bot.getChat(update.effective_chat.id)
     if not was_member and is_member:
         if chat.permissions.can_send_messages:
-            if switch_command1 is True:
-                await update.effective_chat.send_message(
-                    hello_msg1_1.format(member_name=member_name),
-                    parse_mode=ParseMode.HTML,
-                )
-            else:
-                await update.effective_chat.send_message(
-                    hello_msg1.format(member_name=member_name),
-                    parse_mode=ParseMode.HTML,
-                )
+            if config['admin_command2']['state'] is True:
+                if config['admin_command1']['state'] is True:
+                    await update.effective_chat.send_message(
+                        hello_msg1_1.format(member_name=member_name),
+                        parse_mode=ParseMode.HTML,
+                    )
+                else:
+                    await update.effective_chat.send_message(
+                        hello_msg1.format(member_name=member_name),
+                        parse_mode=ParseMode.HTML,
+                    )
     elif was_member and not is_member:
-        await update.effective_chat.send_message(
-            f"{random.choice(goodbye_msgs)}",
-            parse_mode=ParseMode.HTML,
-        )
+        if config['admin_command3']['state'] is True:
+            await update.effective_chat.send_message(
+                f"{random.choice(goodbye_msgs)}",
+                parse_mode=ParseMode.HTML,
+            )
 
 
 async def forward(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -315,14 +323,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def moderation_msg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Checks channel comments for spam urls."""
+    print(update.message)
     await antispam(update.message, context)
 
     """Checks chat messages for unacceptable content."""
     result_word = filter_word(update.message.text)
     if result_word is not False:
-        logger.info(
-            f"{result_word}, moderation_msg, message_id = {update.message.message_id}, "
-            f"user_id = {update.message.from_user.id}, chat_id = {update.message.chat.id}")
         for key in admins:
             await update.message.forward(admins[key])
             await context.bot.send_message(chat_id=admins[key], text=result_word, parse_mode=ParseMode.HTML)
@@ -335,9 +341,6 @@ async def moderation_caption(update: Update, context: ContextTypes.DEFAULT_TYPE)
     """Checks chat messages for unacceptable content."""
     result_word = filter_word(update.message.caption)
     if result_word is not False:
-        logger.info(
-            f"{result_word}, moderation_caption, message_id = {update.message.message_id}, "
-            f"user_id = {update.message.from_user.id}, chat_id = {update.message.chat.id}")
         for key in admins:
             await update.message.forward(admins[key])
             await context.bot.send_message(chat_id=admins[key], text=result_word, parse_mode=ParseMode.HTML)
@@ -349,14 +352,14 @@ async def moderation_edited_msg(update: Update, context: ContextTypes.DEFAULT_TY
 
     """Checks chat messages for unacceptable content."""
     result_word = filter_word(update.edited_message.text)
-    logger.info(f"{result_word}, moderation_edited_msg, message_id = {update.edited_message.message_id}, "
-                f"user_id = {update.edited_message.from_user.id}, chat_id = {update.edited_message.chat.id}, "
-                f"message_text = {update.edited_message.text}")
 
     if result_word is not False:
         logger.info(f"{result_word}, moderation_edited_msg, message_id = {update.edited_message.message_id}, "
                     f"user_id = {update.edited_message.from_user.id}, chat_id = {update.edited_message.chat.id}, "
                     f"message_text = {update.edited_message.text}")
+        await update.edited_message.forward(config['debug_chat'])
+        await context.bot.send_message(chat_id=config['debug_chat'], text=str(update.message),
+                                       parse_mode=ParseMode.HTML)
         for key in admins:
             await update.edited_message.forward(admins[key])
             await context.bot.send_message(chat_id=admins[key], text=f"{result_word}, сообщение отредактировано", parse_mode=ParseMode.HTML)
@@ -369,8 +372,6 @@ async def moderation_edited_caption(update: Update, context: ContextTypes.DEFAUL
     """Checks chat messages for unacceptable content."""
     result_word = filter_word(update.edited_message.caption)
     if result_word is not False:
-        logger.info(f"{result_word}, moderation_edited_caption, message_id = {update.edited_message.message_id}, "
-                    f"user_id = {update.edited_message.from_user.id}, chat_id = {update.edited_message.chat.id}")
         for key in admins:
             await update.edited_message.forward(admins[key])
             await context.bot.send_message(chat_id=admins[key], text=f"{result_word}, сообщение отредактировано", parse_mode=ParseMode.HTML)
@@ -389,32 +390,49 @@ async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     if update.message.sender_chat is not None:
         anon = update.message.sender_chat.id
     if member.status == 'administrator' or member.status == 'creator' or anon == update.message.chat.id:
-        global switch_command1
-        message = update.message.text
-        if re.search('off$', message) and switch_command1 is False:
-            await update.effective_chat.send_message(
-                    'Спойлеры запрещены!',
-                    parse_mode=ParseMode.HTML,
-                )
-            switch_command1 = True
-            config['switch1_state'] = True
-            json_object = json.dumps(config, ensure_ascii=False, indent=4)
-            with open("config.json", "w", encoding='utf-8') as outfile:
-                outfile.write(json_object)
-                outfile.close()
-        if re.search('on$', message) and switch_command1 is True:
-            await update.effective_chat.send_message(
-                    'Спойлеры разрешены!',
-                    parse_mode=ParseMode.HTML,
-                )
-            switch_command1 = False
-            config['switch1_state'] = False
-            json_object = json.dumps(config, ensure_ascii=False, indent=4)
-            with open("config.json", "w", encoding='utf-8') as outfile:
-                outfile.write(json_object)
-                outfile.close()
+        admin_message = update.message.text
+        if admin_message.startswith(f"{admin_command_start}{config['admin_command1']['text']}"):
+            if admin_message == f"{admin_command_start}{config['admin_command1']['text']}_off" and config['admin_command1']['state'] is False:
+                await update.effective_chat.send_message(
+                        config['admin_command1']['answer_off'],
+                        parse_mode=ParseMode.HTML,
+                    )
+                config['admin_command1']['state'] = True
+            elif admin_message == f"{admin_command_start}{config['admin_command1']['text']}_on" and config['admin_command1']['state'] is True:
+                await update.effective_chat.send_message(
+                        config['admin_command1']['answer_on'],
+                        parse_mode=ParseMode.HTML,
+                    )
+                config['admin_command1']['state'] = False
+        elif admin_message.startswith(f"{admin_command_start}{config['admin_command2']['text']}"):
+            if admin_message == f"{admin_command_start}{config['admin_command2']['text']}_off" and config['admin_command2']['state'] is True:
+                await update.effective_chat.send_message(
+                        config['admin_command2']['answer_off'],
+                        parse_mode=ParseMode.HTML,
+                    )
+                config['admin_command2']['state'] = False
+            elif admin_message == f"{admin_command_start}{config['admin_command2']['text']}_on" and config['admin_command2']['state'] is False:
+                await update.effective_chat.send_message(
+                        config['admin_command2']['answer_on'],
+                        parse_mode=ParseMode.HTML,
+                    )
+                config['admin_command2']['state'] = True
+        elif admin_message.startswith(f"{admin_command_start}{config['admin_command3']['text']}"):
+            if admin_message == f"{admin_command_start}{config['admin_command3']['text']}_off" and config['admin_command3']['state'] is True:
+                await update.effective_chat.send_message(
+                        config['admin_command3']['answer_off'],
+                        parse_mode=ParseMode.HTML,
+                    )
+                config['admin_command3']['state'] = False
+            elif admin_message == f"{admin_command_start}{config['admin_command3']['text']}_on" and config['admin_command3']['state'] is False:
+                await update.effective_chat.send_message(
+                        config['admin_command3']['answer_on'],
+                        parse_mode=ParseMode.HTML,
+                    )
+                config['admin_command3']['state'] = True
+        config_writer()
     else:
-        await update.message.reply_html('Нет прав на эту команду!')
+        await update.message.reply_html(config['non_admin_answer'])
 
 
 async def helper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -457,7 +475,8 @@ def main() -> None:
     # Forward the pm messages on Telegram
     application.add_handler(MessageHandler(filters.ChatType.PRIVATE, forward))
 
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(hello_message_change_keyword), adm_chat_commands))
+    # Admin commands
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(f"^{admin_command_start}"), adm_chat_commands))
 
     # Random fun messages
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(random_fun_keyword), random_fun))
