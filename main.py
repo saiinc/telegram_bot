@@ -43,7 +43,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
 dict_re = {
     'а': '[@|а|а́|a]',
     'б': '[б|6|b]',
@@ -87,7 +86,6 @@ CWF.close()
 PWF = open('PingWords.txt', 'r', encoding='utf-8')
 PingWords = list(filter(None, PWF.read().split('\n')))
 PWF.close()
-
 
 # reading the settings from the file
 with open('config.json', 'r', encoding='utf-8') as cf:
@@ -223,6 +221,19 @@ async def antispam(msg, context):
                                 await msg.forward(admins[key])
                             await context.bot.deleteMessage(msg.chat.id, msg.message_id)
                             return
+        elif re.search(config['warn_keyword'], msg.text):
+            userid = msg.from_user.id
+            member = await msg.chat.get_member(userid)
+            anon = None
+            if msg.sender_chat is not None:
+                anon = msg.sender_chat.id
+            if member.status == 'administrator' or member.status == 'creator' or anon == msg.chat.id:
+                msg_reply = msg.reply_to_message
+                for key in admins:
+                    await context.bot.send_message(chat_id=admins[key],
+                                                   text=f'{msg.text} {msg_reply.from_user.first_name}, '
+                                                        f'{msg_reply.from_user.username}, id: {msg_reply.from_user.id}',
+                                                   parse_mode=ParseMode.HTML)
 
 
 async def track_chats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -323,10 +334,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def moderation_msg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Checks channel comments for spam urls."""
-    print(update.message)
     await antispam(update.message, context)
 
     """Checks chat messages for unacceptable content."""
+    print(update.message)
+    print(' ')
     result_word = filter_word(update.message.text)
     if result_word is not False:
         for key in admins:
@@ -354,15 +366,15 @@ async def moderation_edited_msg(update: Update, context: ContextTypes.DEFAULT_TY
     result_word = filter_word(update.edited_message.text)
 
     if result_word is not False:
-        logger.info(f"{result_word}, moderation_edited_msg, message_id = {update.edited_message.message_id}, "
-                    f"user_id = {update.edited_message.from_user.id}, chat_id = {update.edited_message.chat.id}, "
-                    f"message_text = {update.edited_message.text}")
+        print('----edited message----')
+        print(update.edited_message)
+        print('----------------------')
         await update.edited_message.forward(config['debug_chat'])
-        await context.bot.send_message(chat_id=config['debug_chat'], text=str(update.message),
-                                       parse_mode=ParseMode.HTML)
+        await context.bot.send_message(chat_id=config['debug_chat'], text=str(update.edited_message))
         for key in admins:
             await update.edited_message.forward(admins[key])
-            await context.bot.send_message(chat_id=admins[key], text=f"{result_word}, сообщение отредактировано", parse_mode=ParseMode.HTML)
+            await context.bot.send_message(chat_id=admins[key], text=f"{result_word}, сообщение отредактировано",
+                                           parse_mode=ParseMode.HTML)
 
 
 async def moderation_edited_caption(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -374,7 +386,8 @@ async def moderation_edited_caption(update: Update, context: ContextTypes.DEFAUL
     if result_word is not False:
         for key in admins:
             await update.edited_message.forward(admins[key])
-            await context.bot.send_message(chat_id=admins[key], text=f"{result_word}, сообщение отредактировано", parse_mode=ParseMode.HTML)
+            await context.bot.send_message(chat_id=admins[key], text=f"{result_word}, сообщение отредактировано",
+                                           parse_mode=ParseMode.HTML)
 
 
 async def random_fun(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -392,43 +405,49 @@ async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     if member.status == 'administrator' or member.status == 'creator' or anon == update.message.chat.id:
         admin_message = update.message.text
         if admin_message.startswith(f"{admin_command_start}{config['admin_command1']['text']}"):
-            if admin_message == f"{admin_command_start}{config['admin_command1']['text']}_off" and config['admin_command1']['state'] is False:
+            if admin_message == f"{admin_command_start}{config['admin_command1']['text']}_off" and \
+                    config['admin_command1']['state'] is False:
                 await update.effective_chat.send_message(
-                        config['admin_command1']['answer_off'],
-                        parse_mode=ParseMode.HTML,
-                    )
+                    config['admin_command1']['answer_off'],
+                    parse_mode=ParseMode.HTML,
+                )
                 config['admin_command1']['state'] = True
-            elif admin_message == f"{admin_command_start}{config['admin_command1']['text']}_on" and config['admin_command1']['state'] is True:
+            elif admin_message == f"{admin_command_start}{config['admin_command1']['text']}_on" and \
+                    config['admin_command1']['state'] is True:
                 await update.effective_chat.send_message(
-                        config['admin_command1']['answer_on'],
-                        parse_mode=ParseMode.HTML,
-                    )
+                    config['admin_command1']['answer_on'],
+                    parse_mode=ParseMode.HTML,
+                )
                 config['admin_command1']['state'] = False
         elif admin_message.startswith(f"{admin_command_start}{config['admin_command2']['text']}"):
-            if admin_message == f"{admin_command_start}{config['admin_command2']['text']}_off" and config['admin_command2']['state'] is True:
+            if admin_message == f"{admin_command_start}{config['admin_command2']['text']}_off" and \
+                    config['admin_command2']['state'] is True:
                 await update.effective_chat.send_message(
-                        config['admin_command2']['answer_off'],
-                        parse_mode=ParseMode.HTML,
-                    )
+                    config['admin_command2']['answer_off'],
+                    parse_mode=ParseMode.HTML,
+                )
                 config['admin_command2']['state'] = False
-            elif admin_message == f"{admin_command_start}{config['admin_command2']['text']}_on" and config['admin_command2']['state'] is False:
+            elif admin_message == f"{admin_command_start}{config['admin_command2']['text']}_on" and \
+                    config['admin_command2']['state'] is False:
                 await update.effective_chat.send_message(
-                        config['admin_command2']['answer_on'],
-                        parse_mode=ParseMode.HTML,
-                    )
+                    config['admin_command2']['answer_on'],
+                    parse_mode=ParseMode.HTML,
+                )
                 config['admin_command2']['state'] = True
         elif admin_message.startswith(f"{admin_command_start}{config['admin_command3']['text']}"):
-            if admin_message == f"{admin_command_start}{config['admin_command3']['text']}_off" and config['admin_command3']['state'] is True:
+            if admin_message == f"{admin_command_start}{config['admin_command3']['text']}_off" and \
+                    config['admin_command3']['state'] is True:
                 await update.effective_chat.send_message(
-                        config['admin_command3']['answer_off'],
-                        parse_mode=ParseMode.HTML,
-                    )
+                    config['admin_command3']['answer_off'],
+                    parse_mode=ParseMode.HTML,
+                )
                 config['admin_command3']['state'] = False
-            elif admin_message == f"{admin_command_start}{config['admin_command3']['text']}_on" and config['admin_command3']['state'] is False:
+            elif admin_message == f"{admin_command_start}{config['admin_command3']['text']}_on" and \
+                    config['admin_command3']['state'] is False:
                 await update.effective_chat.send_message(
-                        config['admin_command3']['answer_on'],
-                        parse_mode=ParseMode.HTML,
-                    )
+                    config['admin_command3']['answer_on'],
+                    parse_mode=ParseMode.HTML,
+                )
                 config['admin_command3']['state'] = True
         config_writer()
     else:
@@ -476,7 +495,8 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.ChatType.PRIVATE, forward))
 
     # Admin commands
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(f"^{admin_command_start}"), adm_chat_commands))
+    application.add_handler(
+        MessageHandler(filters.ChatType.GROUPS & filters.Regex(f"^{admin_command_start}"), adm_chat_commands))
 
     # Random fun messages
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(random_fun_keyword), random_fun))
@@ -485,10 +505,15 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(helper_keyword), helper))
 
     # Moderating chats
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.TEXT, moderation_msg))
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.EDITED_MESSAGE & filters.TEXT, moderation_edited_msg))
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.CAPTION, moderation_caption))
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.EDITED_MESSAGE & filters.CAPTION, moderation_edited_caption))
+    application.add_handler(
+        MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.TEXT, moderation_msg))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.EDITED_MESSAGE & filters.TEXT,
+                                           moderation_edited_msg))
+    application.add_handler(
+        MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.CAPTION, moderation_caption))
+    application.add_handler(
+        MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.EDITED_MESSAGE & filters.CAPTION,
+                       moderation_edited_caption))
 
     # Run the bot until the user presses Ctrl-C
     # We pass 'allowed_updates' handle *all* updates including `chat_member` updates
