@@ -197,6 +197,8 @@ def filter_word(msg):
 
 
 async def antispam(msg, context):
+    """Delete spam channel comments"""
+
     message_entities = None
 
     if msg.entities is not None and len(msg.entities) > 0:
@@ -216,7 +218,8 @@ async def antispam(msg, context):
                             anon = msg.sender_chat.id
                         if member.status != 'administrator' and member.status != 'creator' and anon != msg.chat.id:
                             for key in admins:
-                                await context.bot.send_message(chat_id=admins[key], text='URL or text_link',
+                                await context.bot.send_message(chat_id=admins[key],
+                                                               text=f'URL or text_link, id: {userid}',
                                                                parse_mode=ParseMode.HTML)
                                 await msg.forward(admins[key])
                             await context.bot.deleteMessage(msg.chat.id, msg.message_id)
@@ -330,6 +333,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         start_msg,
         # reply_markup=ForceReply(selective=True),
     )
+
+
+async def delete_join(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Delete chat join messages"""
+    if config['admin_command4']['state'] is True:
+        await update.message.delete()
 
 
 async def moderation_msg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -449,6 +458,21 @@ async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                     parse_mode=ParseMode.HTML,
                 )
                 config['admin_command3']['state'] = True
+        elif admin_message.startswith(f"{admin_command_start}{config['admin_command4']['text']}"):
+            if admin_message == f"{admin_command_start}{config['admin_command4']['text']}_off" and \
+                    config['admin_command4']['state'] is True:
+                await update.effective_chat.send_message(
+                    config['admin_command4']['answer_off'],
+                    parse_mode=ParseMode.HTML,
+                )
+                config['admin_command4']['state'] = False
+            elif admin_message == f"{admin_command_start}{config['admin_command4']['text']}_on" and \
+                    config['admin_command4']['state'] is False:
+                await update.effective_chat.send_message(
+                    config['admin_command4']['answer_on'],
+                    parse_mode=ParseMode.HTML,
+                )
+                config['admin_command4']['state'] = True
         config_writer()
     else:
         await update.message.reply_html(config['non_admin_answer'])
@@ -495,8 +519,8 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.ChatType.PRIVATE, forward))
 
     # Admin commands
-    application.add_handler(
-        MessageHandler(filters.ChatType.GROUPS & filters.Regex(f"^{admin_command_start}"), adm_chat_commands))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.Regex(f"^{admin_command_start}"),
+                                           adm_chat_commands))
 
     # Random fun messages
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(random_fun_keyword), random_fun))
@@ -504,16 +528,18 @@ def main() -> None:
     # Chat content request
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(helper_keyword), helper))
 
+    # Delete chat join messages
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.StatusUpdate.NEW_CHAT_MEMBERS, delete_join))
+
     # Moderating chats
-    application.add_handler(
-        MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.TEXT, moderation_msg))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.TEXT,
+                                           moderation_msg))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.EDITED_MESSAGE & filters.TEXT,
                                            moderation_edited_msg))
-    application.add_handler(
-        MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.CAPTION, moderation_caption))
-    application.add_handler(
-        MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.EDITED_MESSAGE & filters.CAPTION,
-                       moderation_edited_caption))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.CAPTION,
+                                           moderation_caption))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.EDITED_MESSAGE & filters.CAPTION,
+                                           moderation_edited_caption))
 
     # Run the bot until the user presses Ctrl-C
     # We pass 'allowed_updates' handle *all* updates including `chat_member` updates
