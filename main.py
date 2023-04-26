@@ -14,7 +14,7 @@ import os
 import logging
 from typing import Optional, Tuple
 
-from telegram import __version__ as TG_VER
+from telegram import __version__ as TG_VER, ChatPermissions
 
 try:
     from telegram import __version_info__
@@ -79,6 +79,7 @@ dict_re = {
 }
 # Регулярки для замены похожих букв и символов на русские
 
+
 CWF = open('CurseWords.txt', 'r', encoding='utf-8')
 CurseWords = list(filter(None, CWF.read().split('\n')))
 CWF.close()
@@ -87,7 +88,7 @@ PWF = open('PingWords.txt', 'r', encoding='utf-8')
 PingWords = list(filter(None, PWF.read().split('\n')))
 PWF.close()
 
-# reading the settings from the file
+# reading the settings from config file
 with open('config.json', 'r', encoding='utf-8') as cf:
     js = cf.read()
     cf.close()
@@ -196,8 +197,20 @@ def filter_word(msg):
     return False
 
 
+async def detect_chat_adm(msg):
+    userid = msg.from_user.id
+    member = await msg.chat.get_member(userid)
+    anon = None
+    if msg.sender_chat is not None:
+        anon = msg.sender_chat.id
+    if member.status != 'administrator' and member.status != 'creator' and anon != msg.chat.id:
+        return False
+    else:
+        return True
+
+
 async def antispam(msg, context):
-    """Delete spam channel comments"""
+    """Delete spam channel messages"""
 
     message_entities = None
 
@@ -211,26 +224,18 @@ async def antispam(msg, context):
             if msg.reply_to_message.is_automatic_forward is True:
                 for message_entity in message_entities:
                     if message_entity.type == 'url' or message_entity.type == 'text_link':
-                        userid = msg.from_user.id
-                        member = await msg.chat.get_member(userid)
-                        anon = None
-                        if msg.sender_chat is not None:
-                            anon = msg.sender_chat.id
-                        if member.status != 'administrator' and member.status != 'creator' and anon != msg.chat.id:
+                        if await detect_chat_adm(msg) is False:
                             for key in admins:
                                 await context.bot.send_message(chat_id=admins[key],
-                                                               text=f'URL or text_link, id: {userid}',
+                                                               text=f'URL or text_link, id: {msg.from_user.id}',
                                                                parse_mode=ParseMode.HTML)
                                 await msg.forward(admins[key])
                             await context.bot.deleteMessage(msg.chat.id, msg.message_id)
                             return
         elif re.search(config['warn_keyword'], msg.text):
-            userid = msg.from_user.id
-            member = await msg.chat.get_member(userid)
-            anon = None
-            if msg.sender_chat is not None:
-                anon = msg.sender_chat.id
-            if member.status == 'administrator' or member.status == 'creator' or anon == msg.chat.id:
+            """Warning chat members by admin"""
+
+            if await detect_chat_adm(msg) is True:
                 msg_reply = msg.reply_to_message
                 for key in admins:
                     await context.bot.send_message(chat_id=admins[key],
@@ -341,12 +346,21 @@ async def delete_join(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await update.message.delete()
 
 
+async def mute_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.reply_to_message is not None:
+        msg = update.message
+        member_id = update.message.reply_to_message.from_user.id
+        if await detect_chat_adm(msg) is True:
+            chat_permissions = ChatPermissions(can_send_messages=False)
+            await context.bot.restrict_chat_member(msg.chat.id, member_id, chat_permissions, time.time() + 86400)
+
+
 async def moderation_msg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Checks channel comments for spam urls."""
     await antispam(update.message, context)
 
     """Checks chat messages for unacceptable content."""
-    print(update.message)
+    print(update)
     print(' ')
     result_word = filter_word(update.message.text)
     if result_word is not False:
@@ -376,7 +390,7 @@ async def moderation_edited_msg(update: Update, context: ContextTypes.DEFAULT_TY
 
     if result_word is not False:
         print('----edited message----')
-        print(update.edited_message)
+        print(update)
         print('----------------------')
         await update.edited_message.forward(config['debug_chat'])
         await context.bot.send_message(chat_id=config['debug_chat'], text=str(update.edited_message))
@@ -406,13 +420,10 @@ async def random_fun(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 
 async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    userid = update.message.from_user.id
-    member = await update.message.chat.get_member(userid)
-    anon = None
-    if update.message.sender_chat is not None:
-        anon = update.message.sender_chat.id
-    if member.status == 'administrator' or member.status == 'creator' or anon == update.message.chat.id:
-        admin_message = update.message.text
+    """Bot control settings"""
+    msg = update.message
+    if await detect_chat_adm(msg) is True:
+        admin_message = msg.text
         if admin_message.startswith(f"{admin_command_start}{config['admin_command1']['text']}"):
             if admin_message == f"{admin_command_start}{config['admin_command1']['text']}_off" and \
                     config['admin_command1']['state'] is False:
@@ -521,6 +532,10 @@ def main() -> None:
     # Admin commands
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.Regex(f"^{admin_command_start}"),
                                            adm_chat_commands))
+
+    # Mute users
+    application.add_handler(
+        MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.Regex(f"^mute"), mute_user))
 
     # Random fun messages
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(random_fun_keyword), random_fun))
