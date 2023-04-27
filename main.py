@@ -364,8 +364,15 @@ async def moderation_msg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     print(' ')
     result_word = filter_word(update.message.text)
     if result_word is not False:
+        chat = await context.bot.get_chat(update.message.chat.id)
         for key in admins:
-            await update.message.forward(admins[key])
+            if not chat.has_protected_content:
+                await update.message.forward(admins[key])
+            else:
+                user = f"{update.message.from_user.first_name}, {update.message.from_user.username}, {update.message.from_user.id}"
+                text = update.message.text
+                link = update.message.link
+                await context.bot.send_message(chat_id=admins[key], text=f"<b>{user}</b> \n{text} \n{link}", parse_mode=ParseMode.HTML)
             await context.bot.send_message(chat_id=admins[key], text=result_word, parse_mode=ParseMode.HTML)
 
 
@@ -376,8 +383,16 @@ async def moderation_caption(update: Update, context: ContextTypes.DEFAULT_TYPE)
     """Checks chat messages for unacceptable content."""
     result_word = filter_word(update.message.caption)
     if result_word is not False:
+        chat = await context.bot.get_chat(update.message.chat.id)
         for key in admins:
-            await update.message.forward(admins[key])
+            if not chat.has_protected_content:
+                await update.message.forward(admins[key])
+            else:
+                user = f"{update.message.from_user.first_name}, {update.message.from_user.username}, {update.message.from_user.id}"
+                text = update.message.caption
+                link = update.message.link
+                await context.bot.send_message(chat_id=admins[key], text=f"<b>{user}</b> \n{text} \n{link}",
+                                               parse_mode=ParseMode.HTML)
             await context.bot.send_message(chat_id=admins[key], text=result_word, parse_mode=ParseMode.HTML)
 
 
@@ -392,10 +407,18 @@ async def moderation_edited_msg(update: Update, context: ContextTypes.DEFAULT_TY
         print('----edited message----')
         print(update)
         print('----------------------')
-        await update.edited_message.forward(config['debug_chat'])
-        await context.bot.send_message(chat_id=config['debug_chat'], text=str(update.edited_message))
+        # await update.edited_message.forward(config['debug_chat'])
+        # await context.bot.send_message(chat_id=config['debug_chat'], text=str(update.edited_message))
+        chat = await context.bot.get_chat(update.edited_message.chat.id)
         for key in admins:
-            await update.edited_message.forward(admins[key])
+            if not chat.has_protected_content:
+                await update.edited_message.forward(admins[key])
+            else:
+                user = f"{update.edited_message.from_user.first_name}, {update.edited_message.from_user.username}, {update.edited_message.from_user.id}"
+                text = update.edited_message.text
+                link = update.edited_message.link
+                await context.bot.send_message(chat_id=admins[key], text=f"<b>{user}</b> \n{text} \n{link}",
+                                               parse_mode=ParseMode.HTML)
             await context.bot.send_message(chat_id=admins[key], text=f"{result_word}, сообщение отредактировано",
                                            parse_mode=ParseMode.HTML)
 
@@ -407,8 +430,16 @@ async def moderation_edited_caption(update: Update, context: ContextTypes.DEFAUL
     """Checks chat messages for unacceptable content."""
     result_word = filter_word(update.edited_message.caption)
     if result_word is not False:
+        chat = await context.bot.get_chat(update.edited_message.chat.id)
         for key in admins:
-            await update.edited_message.forward(admins[key])
+            if not chat.has_protected_content:
+                await update.edited_message.forward(admins[key])
+            else:
+                user = f"{update.edited_message.from_user.first_name}, {update.edited_message.from_user.username}, {update.edited_message.from_user.id}"
+                text = update.edited_message.caption
+                link = update.edited_message.link
+                await context.bot.send_message(chat_id=admins[key], text=f"<b>{user}</b> \n{text} \n{link}",
+                                               parse_mode=ParseMode.HTML)
             await context.bot.send_message(chat_id=admins[key], text=f"{result_word}, сообщение отредактировано",
                                            parse_mode=ParseMode.HTML)
 
