@@ -329,6 +329,11 @@ async def forward(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.forward(forward_pm)
 
 
+async def forward_vip(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Forward from channel to private chat."""
+    await update.channel_post.forward(config['private_chat'])
+
+
 # Define a few command handlers. These usually take the two arguments update and
 # context.
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -559,6 +564,9 @@ def main() -> None:
 
     # Forward the pm messages on Telegram
     application.add_handler(MessageHandler(filters.ChatType.PRIVATE, forward))
+
+    # VIP chat special
+    application.add_handler(MessageHandler(filters.ChatType.CHANNEL, forward_vip))
 
     # Admin commands
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.Regex(f"^{admin_command_start}"),
