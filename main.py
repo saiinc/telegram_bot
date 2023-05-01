@@ -361,6 +361,13 @@ async def mute_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def moderation_msg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
+    if config['admin_command5']['state'] is True:
+        if update.message.sender_chat is not None:
+            anon = update.message.sender_chat.id
+            if anon == update.message.chat.id:
+                await update.message.copy(config['support_chat'])
+
     """Checks channel comments for spam urls."""
     await antispam(update.message, context)
 
@@ -519,7 +526,22 @@ async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                     config['admin_command4']['answer_on'],
                     parse_mode=ParseMode.HTML,
                 )
-                config['admin_command4']['state'] = True
+                config['admin_command5']['state'] = True
+        elif admin_message.startswith(f"{admin_command_start}{config['admin_command5']['text']}"):
+            if admin_message == f"{admin_command_start}{config['admin_command5']['text']}_off" and \
+                    config['admin_command5']['state'] is True:
+                await update.effective_chat.send_message(
+                    config['admin_command5']['answer_off'],
+                    parse_mode=ParseMode.HTML,
+                )
+                config['admin_command5']['state'] = False
+            elif admin_message == f"{admin_command_start}{config['admin_command5']['text']}_on" and \
+                    config['admin_command5']['state'] is False:
+                await update.effective_chat.send_message(
+                    config['admin_command5']['answer_on'],
+                    parse_mode=ParseMode.HTML,
+                )
+                config['admin_command5']['state'] = True
         config_writer()
     else:
         await update.message.reply_html(config['non_admin_answer'])
