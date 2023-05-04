@@ -103,18 +103,23 @@ admin_command_start = config.get('admin_command_start')
 hf1 = open('hello1.txt', 'r', encoding='utf-8')
 hello_msg1 = hf1.read()
 hf1.close()
+
 hf1_1 = open('hello1_1.txt', 'r', encoding='utf-8')
 hello_msg1_1 = hf1_1.read()
 hf1_1.close()
+
 gf = open('goodbye.txt', 'r', encoding='utf-8')
 goodbye_msgs = list(filter(None, gf.read().split('\n')))
 gf.close()
+
 sf = open('start.txt', 'r', encoding='utf-8')
 start_msg = sf.read()
 sf.close()
+
 prf = open('Ping_rand.txt', 'r', encoding='utf-8')
 random_msgs = list(filter(None, prf.read().split('\n')))
 prf.close()
+
 rpf = open('Rand_Pervoe.txt', 'r', encoding='utf-8')
 rand_helper = list(filter(None, rpf.read().split('\n')))
 rpf.close()
@@ -305,8 +310,8 @@ async def greet_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE)
     chat = await context.bot.getChat(update.effective_chat.id)
     if not was_member and is_member:
         if chat.permissions.can_send_messages:
-            if config['admin_command2']['state'] is True:
-                if config['admin_command1']['state'] is True:
+            if config['admin_commands']['hello']['state'] is True:
+                if config['admin_commands']['spoilers']['state'] is True:
                     await update.effective_chat.send_message(
                         hello_msg1_1.format(member_name=member_name),
                         parse_mode=ParseMode.HTML,
@@ -317,7 +322,7 @@ async def greet_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE)
                         parse_mode=ParseMode.HTML,
                     )
     elif was_member and not is_member:
-        if config['admin_command3']['state'] is True:
+        if config['admin_commands']['goodbye']['state'] is True:
             await update.effective_chat.send_message(
                 f"{random.choice(goodbye_msgs)}",
                 parse_mode=ParseMode.HTML,
@@ -347,7 +352,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def delete_join(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Delete chat join messages"""
-    if config['admin_command4']['state'] is True:
+    if config['admin_commands']['join']['state'] is True:
         await update.message.delete()
 
 
@@ -362,7 +367,7 @@ async def mute_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def moderation_msg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
-    if config['admin_command5']['state'] is True:
+    if config['admin_commands']['q&a']['state'] is True:
         if update.message.sender_chat is not None:
             anon = update.message.sender_chat.id
             if anon == update.message.chat.id:
@@ -467,81 +472,19 @@ async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     msg = update.message
     if await detect_chat_adm(msg) is True:
         admin_message = msg.text
-        if admin_message.startswith(f"{admin_command_start}{config['admin_command1']['text']}"):
-            if admin_message == f"{admin_command_start}{config['admin_command1']['text']}_off" and \
-                    config['admin_command1']['state'] is False:
+        for command in config['admin_commands']:
+            if admin_message == f"{admin_command_start}{command}_off" and config['admin_commands'][command]['state'] is False:
                 await update.effective_chat.send_message(
-                    config['admin_command1']['answer_off'],
+                    config['admin_commands'][command]['answer_off'],
                     parse_mode=ParseMode.HTML,
                 )
-                config['admin_command1']['state'] = True
-            elif admin_message == f"{admin_command_start}{config['admin_command1']['text']}_on" and \
-                    config['admin_command1']['state'] is True:
+                config['admin_commands'][command]['state'] = True
+            elif admin_message == f"{admin_command_start}{command}_on" and config['admin_commands'][command]['state'] is True:
                 await update.effective_chat.send_message(
-                    config['admin_command1']['answer_on'],
+                    config['admin_commands'][command]['answer_on'],
                     parse_mode=ParseMode.HTML,
                 )
-                config['admin_command1']['state'] = False
-        elif admin_message.startswith(f"{admin_command_start}{config['admin_command2']['text']}"):
-            if admin_message == f"{admin_command_start}{config['admin_command2']['text']}_off" and \
-                    config['admin_command2']['state'] is True:
-                await update.effective_chat.send_message(
-                    config['admin_command2']['answer_off'],
-                    parse_mode=ParseMode.HTML,
-                )
-                config['admin_command2']['state'] = False
-            elif admin_message == f"{admin_command_start}{config['admin_command2']['text']}_on" and \
-                    config['admin_command2']['state'] is False:
-                await update.effective_chat.send_message(
-                    config['admin_command2']['answer_on'],
-                    parse_mode=ParseMode.HTML,
-                )
-                config['admin_command2']['state'] = True
-        elif admin_message.startswith(f"{admin_command_start}{config['admin_command3']['text']}"):
-            if admin_message == f"{admin_command_start}{config['admin_command3']['text']}_off" and \
-                    config['admin_command3']['state'] is True:
-                await update.effective_chat.send_message(
-                    config['admin_command3']['answer_off'],
-                    parse_mode=ParseMode.HTML,
-                )
-                config['admin_command3']['state'] = False
-            elif admin_message == f"{admin_command_start}{config['admin_command3']['text']}_on" and \
-                    config['admin_command3']['state'] is False:
-                await update.effective_chat.send_message(
-                    config['admin_command3']['answer_on'],
-                    parse_mode=ParseMode.HTML,
-                )
-                config['admin_command3']['state'] = True
-        elif admin_message.startswith(f"{admin_command_start}{config['admin_command4']['text']}"):
-            if admin_message == f"{admin_command_start}{config['admin_command4']['text']}_off" and \
-                    config['admin_command4']['state'] is True:
-                await update.effective_chat.send_message(
-                    config['admin_command4']['answer_off'],
-                    parse_mode=ParseMode.HTML,
-                )
-                config['admin_command4']['state'] = False
-            elif admin_message == f"{admin_command_start}{config['admin_command4']['text']}_on" and \
-                    config['admin_command4']['state'] is False:
-                await update.effective_chat.send_message(
-                    config['admin_command4']['answer_on'],
-                    parse_mode=ParseMode.HTML,
-                )
-                config['admin_command5']['state'] = True
-        elif admin_message.startswith(f"{admin_command_start}{config['admin_command5']['text']}"):
-            if admin_message == f"{admin_command_start}{config['admin_command5']['text']}_off" and \
-                    config['admin_command5']['state'] is True:
-                await update.effective_chat.send_message(
-                    config['admin_command5']['answer_off'],
-                    parse_mode=ParseMode.HTML,
-                )
-                config['admin_command5']['state'] = False
-            elif admin_message == f"{admin_command_start}{config['admin_command5']['text']}_on" and \
-                    config['admin_command5']['state'] is False:
-                await update.effective_chat.send_message(
-                    config['admin_command5']['answer_on'],
-                    parse_mode=ParseMode.HTML,
-                )
-                config['admin_command5']['state'] = True
+                config['admin_commands'][command]['state'] = False
         config_writer()
     else:
         await update.message.reply_html(config['non_admin_answer'])
@@ -551,8 +494,7 @@ async def helper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         if update.message is not None:
             for helper_entity in helper_list:
-                keyword = update.message.text
-                keyword = replace_letters(keyword)
+                keyword = replace_letters(update.message.text)
                 if helper_entity['command'] == keyword:
                     if helper_entity['delay'] == 'Yes':
                         await update.message.reply_html(
