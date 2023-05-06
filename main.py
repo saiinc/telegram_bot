@@ -319,7 +319,7 @@ async def greet_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not was_member and is_member:
         if chat.permissions.can_send_messages:
             if config['admin_commands']['hello']['state'] is True:
-                if config['admin_commands']['spoilers']['state'] is True:
+                if config['admin_commands']['spoilers']['state'] is False:
                     await update.effective_chat.send_message(
                         hello_msg1_1.format(member_name=member_name),
                         parse_mode=ParseMode.HTML,
@@ -486,19 +486,22 @@ async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 'Ok')
             return
         for command in config['admin_commands']:
-            if admin_message == f"{admin_command_start}{command}_off" and config['admin_commands'][command]['state'] is False:
+            if admin_message == f"{admin_command_start}{command}_off" and config['admin_commands'][command]['state'] is True:
                 await update.effective_chat.send_message(
                     config['admin_commands'][command]['answer_off'],
                     parse_mode=ParseMode.HTML,
                 )
-                config['admin_commands'][command]['state'] = True
-            elif admin_message == f"{admin_command_start}{command}_on" and config['admin_commands'][command]['state'] is True:
+                config['admin_commands'][command]['state'] = False
+                config_writer()
+                return
+            elif admin_message == f"{admin_command_start}{command}_on" and config['admin_commands'][command]['state'] is False:
                 await update.effective_chat.send_message(
                     config['admin_commands'][command]['answer_on'],
                     parse_mode=ParseMode.HTML,
                 )
-                config['admin_commands'][command]['state'] = False
-        config_writer()
+                config['admin_commands'][command]['state'] = True
+                config_writer()
+                return
     else:
         await update.message.reply_html(config['non_admin_answer'])
 
