@@ -124,18 +124,26 @@ rpf = open('Rand_Pervoe.txt', 'r', encoding='utf-8')
 rand_helper = list(filter(None, rpf.read().split('\n')))
 rpf.close()
 
+
 helper_list = []
-for root, dirs, files in os.walk('helper'):
-    for filename in files:
-        with open('helper/' + filename, 'r', encoding="utf-8") as helperf:
-            js_h = helperf.read()
-            helperf.close()
-        try:
-            helper_ent = json.loads(js_h, strict=False)
-            helper_list.append(helper_ent)
-        except json.decoder.JSONDecodeError:
-            print(json.decoder.JSONDecodeError)
-            print(js_h)
+
+
+def helper_read():
+    helper_list.clear()
+    for root, dirs, files in os.walk('helper'):
+        for filename in files:
+            with open('helper/' + filename, 'r', encoding="utf-8") as helperf:
+                js_h = helperf.read()
+                helperf.close()
+            try:
+                helper_ent = json.loads(js_h, strict=False)
+                helper_list.append(helper_ent)
+            except json.decoder.JSONDecodeError:
+                print(json.decoder.JSONDecodeError)
+                print(js_h)
+
+
+helper_read()
 
 
 def config_writer():
@@ -472,6 +480,11 @@ async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     msg = update.message
     if await detect_chat_adm(msg) is True:
         admin_message = msg.text
+        if admin_message == f"{admin_command_start}{config['admin_command_update']}":
+            helper_read()
+            await update.message.reply_html(
+                'Ok')
+            return
         for command in config['admin_commands']:
             if admin_message == f"{admin_command_start}{command}_off" and config['admin_commands'][command]['state'] is False:
                 await update.effective_chat.send_message(
