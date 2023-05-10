@@ -100,6 +100,7 @@ helper_keyword = config.get('helper_keyword')
 admins = config.get('admins')
 admin_command_start = config.get('admin_command_start')
 
+
 hf1 = open('hello1.txt', 'r', encoding='utf-8')
 hello_msg1 = hf1.read()
 hf1.close()
@@ -314,10 +315,15 @@ async def greet_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE)
     was_member, is_member = result
     cause_name = update.chat_member.from_user.mention_html()
     member_name = update.chat_member.new_chat_member.user.mention_html()
-
+    print(update)
     chat = await context.bot.getChat(update.effective_chat.id)
     if not was_member and is_member:
         if chat.permissions.can_send_messages:
+            for key in admins:
+                user = f"{update.chat_member.from_user.first_name}, {update.chat_member.from_user.username}, {update.chat_member.from_user.id}"
+                text = "now joined."
+                await context.bot.send_message(chat_id=admins[key], text=f"<b>{user}</b> \n{text}",
+                                               parse_mode=ParseMode.HTML)
             if config['admin_commands']['hello']['state'] is True:
                 if config['admin_commands']['spoilers']['state'] is False:
                     await update.effective_chat.send_message(
@@ -338,7 +344,7 @@ async def greet_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 async def forward(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Forward the user message."""
+    """Forward the private user message."""
     await update.message.forward(forward_pm)
 
 
