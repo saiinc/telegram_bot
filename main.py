@@ -79,15 +79,6 @@ dict_re = {
 }
 # Регулярки для замены похожих букв и символов на русские
 
-
-CWF = open('CurseWords.txt', 'r', encoding='utf-8')
-CurseWords = list(filter(None, CWF.read().split('\n')))
-CWF.close()
-
-PWF = open('PingWords.txt', 'r', encoding='utf-8')
-PingWords = list(filter(None, PWF.read().split('\n')))
-PWF.close()
-
 # reading the settings from config file
 with open('config.json', 'r', encoding='utf-8') as cf:
     js = cf.read()
@@ -109,22 +100,25 @@ hf1_1 = open('hello1_1.txt', 'r', encoding='utf-8')
 hello_msg1_1 = hf1_1.read()
 hf1_1.close()
 
-gf = open('goodbye.txt', 'r', encoding='utf-8')
-goodbye_msgs = list(filter(None, gf.read().split('\n')))
-gf.close()
-
 sf = open('start.txt', 'r', encoding='utf-8')
 start_msg = sf.read()
 sf.close()
 
-prf = open('Ping_rand.txt', 'r', encoding='utf-8')
-random_msgs = list(filter(None, prf.read().split('\n')))
-prf.close()
 
-rpf = open('Rand_Pervoe.txt', 'r', encoding='utf-8')
-rand_helper = list(filter(None, rpf.read().split('\n')))
-rpf.close()
+str_content = {}
 
+
+def str_content_read():
+    str_content.clear()
+    for root, dirs, files in os.walk('str_content'):
+        for filename in files:
+            with open('str_content/' + filename, 'r', encoding="utf-8") as strf:
+                strc = list(filter(None, strf.read().split('\n')))
+                strf.close()
+            str_content[filename[:filename.rfind('.')].lower()] = strc
+
+
+str_content_read()
 
 helper_list = []
 
@@ -195,14 +189,14 @@ def filter_word(msg):
         w = replace_letters(w)
 
         '''admin trigger words'''
-        for word in PingWords:
+        for word in str_content['ping_words']:
             b = fuzz.token_sort_ratio(word, w)  # Проверяю сходство слов из списка
             if b >= 100:
                 return f"{w} | {b}% Слово-триггер: {word}"
             else:
                 pass
 
-        for word in CurseWords:
+        for word in str_content['curse_words']:
             b = fuzz.token_sort_ratio(word, w)  # Проверяю сходство слов из списка
             if b >= 87:
                 return f"{w} | {b}% Слово-триггер: {word}"
@@ -320,9 +314,11 @@ async def greet_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not was_member and is_member:
         if chat.permissions.can_send_messages:
             for key in admins:
-                user = f"{update.chat_member.from_user.first_name}, {update.chat_member.from_user.username}, {update.chat_member.from_user.id}"
+                user = f"{update.chat_member.new_chat_member.user.first_name}, " \
+                       f"{update.chat_member.new_chat_member.user.username}, " \
+                       f"{update.chat_member.new_chat_member.user.id}"
                 text = "now joined."
-                await context.bot.send_message(chat_id=admins[key], text=f"<b>{user}</b> \n{text}",
+                await context.bot.send_message(chat_id=admins[key], text=f"‼<b>{user}</b> \n{text}‼",
                                                parse_mode=ParseMode.HTML)
             if config['admin_commands']['hello']['state'] is True:
                 if config['admin_commands']['spoilers']['state'] is False:
@@ -338,7 +334,7 @@ async def greet_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE)
     elif was_member and not is_member:
         if config['admin_commands']['goodbye']['state'] is True:
             await update.effective_chat.send_message(
-                f"{random.choice(goodbye_msgs)}",
+                f"{random.choice(str_content['goodbye'])}",
                 parse_mode=ParseMode.HTML,
             )
 
@@ -478,7 +474,7 @@ async def moderation_edited_caption(update: Update, context: ContextTypes.DEFAUL
 async def random_fun(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message is not None:
         await update.message.reply_html(
-            f'{random.choice(random_msgs)}')
+            f"{random.choice(str_content['ping_rand'])}")
 
 
 async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -488,6 +484,7 @@ async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         admin_message = msg.text
         if admin_message == f"{admin_command_start}{config['admin_command_update']}":
             helper_read()
+            str_content_read()
             await update.message.reply_html(
                 'Ok')
             return
@@ -520,7 +517,7 @@ async def helper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 if helper_entity['command'] == keyword:
                     if helper_entity['delay'] == 'Yes':
                         await update.message.reply_html(
-                            f'{random.choice(rand_helper)}')
+                            f"{random.choice(str_content['rand_pervoe'])}")
                         time.sleep(10)
                     await update.message.reply_html(
                         helper_entity['content'],
