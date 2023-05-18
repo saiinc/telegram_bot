@@ -105,9 +105,6 @@ start_msg = sf.read()
 sf.close()
 
 
-str_content = {}
-
-
 def str_content_read():
     str_content.clear()
     for root, dirs, files in os.walk('str_content'):
@@ -116,11 +113,6 @@ def str_content_read():
                 strc = list(filter(None, strf.read().split('\n')))
                 strf.close()
             str_content[filename[:filename.rfind('.')].lower()] = strc
-
-
-str_content_read()
-
-helper_list = []
 
 
 def helper_read():
@@ -138,6 +130,9 @@ def helper_read():
                 print(js_h)
 
 
+str_content = {}
+helper_list = []
+str_content_read()
 helper_read()
 
 
