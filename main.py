@@ -307,6 +307,8 @@ async def greet_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE)
     member_name = update.chat_member.new_chat_member.user.mention_html()
     print(update)
     chat = await context.bot.getChat(update.effective_chat.id)
+    if chat.permissions is None:
+        return
     if not was_member and is_member:
         if chat.permissions.can_send_messages:
             for key in admins:
@@ -559,7 +561,7 @@ def main() -> None:
     # application.add_handler(CommandHandler("show_chats", show_chats))
 
     # Handle members joining/leaving chats.
-    application.add_handler(ChatMemberHandler(greet_chat_members, filters.ChatType.GROUPS, ChatMemberHandler.CHAT_MEMBER))
+    application.add_handler(ChatMemberHandler(greet_chat_members, ChatMemberHandler.CHAT_MEMBER))
 
     # on different commands - answer in Telegram
     application.add_handler(CommandHandler("start", start, filters.ChatType.PRIVATE))
