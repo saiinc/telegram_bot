@@ -87,6 +87,7 @@ config = json.loads(js)
 telegram_token = config.get('telegram_token')
 forward_pm = config.get('forward_pm')
 random_fun_keyword = config.get('random_fun_keyword')
+random_game_keyword = config.get('random_game_keyword')
 helper_keyword = config.get('helper_keyword')
 admins = config.get('admins')
 admin_command_start = config.get('admin_command_start')
@@ -341,7 +342,8 @@ async def forward(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def forward_vip(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Forward from channel to private chat."""
-    await update.channel_post.forward(config['private_chat'])
+    if update.channel_post.pinned_message is None:
+        await update.channel_post.forward(config['private_chat'])
 
 
 # Define a few command handlers. These usually take the two arguments update and
@@ -467,9 +469,31 @@ async def moderation_edited_caption(update: Update, context: ContextTypes.DEFAUL
 
 
 async def random_fun(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Bot replies a random string from text file"""
     if update.message is not None:
         await update.message.reply_html(
             f"{random.choice(str_content['ping_rand'])}")
+
+
+async def random_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Bot replies a random number"""
+    if update.message is not None:
+        if await detect_chat_adm(update.message):
+            s = update.message.text
+            nums = re.findall(r'\d+', s)
+            nums = [int(i) for i in nums]
+            diap = list(range(nums[1], nums[2] + 1))
+            rand_nums = []
+            if nums[0] > len(diap):
+                await update.message.reply_html(
+                    f"Количество чисел больше диапазона.")
+            else:
+                for i in range(nums[0]):
+                    rand_num = random.choice(range(len(diap)))
+                    rand_nums.append(diap[rand_num])
+                    del diap[rand_num]
+                await update.message.reply_html(
+                    f"Случайные числа: {rand_nums}.")
 
 
 async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -535,7 +559,7 @@ def main() -> None:
     # application.add_handler(CommandHandler("show_chats", show_chats))
 
     # Handle members joining/leaving chats.
-    application.add_handler(ChatMemberHandler(greet_chat_members, ChatMemberHandler.CHAT_MEMBER))
+    application.add_handler(ChatMemberHandler(greet_chat_members, filters.ChatType.GROUPS, ChatMemberHandler.CHAT_MEMBER))
 
     # on different commands - answer in Telegram
     application.add_handler(CommandHandler("start", start, filters.ChatType.PRIVATE))
@@ -556,6 +580,9 @@ def main() -> None:
 
     # Random fun messages
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(random_fun_keyword), random_fun))
+
+    # Random numbers game
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(random_game_keyword), random_game))
 
     # Chat content request
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(helper_keyword), helper))
