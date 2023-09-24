@@ -39,7 +39,7 @@ import json
 # Enable logging
 
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.WARNING
 )
 logger = logging.getLogger(__name__)
 
@@ -77,71 +77,159 @@ dict_re = {
     'я': '[я|r]',
     # ' ': '[.|,|!|?|&|)|(|\\|\/|*|-|_|"|\'|;|®]'
 }
+
+
 # Регулярки для замены похожих букв и символов на русские
 
-# reading the settings from config file
-with open('config.json', 'r', encoding='utf-8') as cf:
-    js = cf.read()
-    cf.close()
-config = json.loads(js)
-telegram_token = config.get('telegram_token')
-forward_pm = config.get('forward_pm')
-random_fun_keyword = config.get('random_fun_keyword')
-random_game_keyword = config.get('random_game_keyword')
-helper_keyword = config.get('helper_keyword')
-admins = config.get('admins')
-admin_command_start = config.get('admin_command_start')
+def config_read():
+    with open('config.json', 'r', encoding='utf-8') as cf:
+        js = cf.read()
+        cf.close()
+    return json.loads(js)
 
 
-hf1 = open('hello1.txt', 'r', encoding='utf-8')
-hello_msg1 = hf1.read()
-hf1.close()
+class UserConfig:
+    telegram_token = ""
+    helper_keyword = ""
+    random_fun_keyword = ""
+    random_game_keyword = ""
+    warn_keyword = ""
+    forward_pm = ""
+    admin_command_start = ""
+    non_admin_answer = ""
+    admin_command_update = ""
 
-hf1_1 = open('hello1_1.txt', 'r', encoding='utf-8')
-hello_msg1_1 = hf1_1.read()
-hf1_1.close()
+    private_chat = ""
+    debug_chat = ""
 
-sf = open('start.txt', 'r', encoding='utf-8')
-start_msg = sf.read()
-sf.close()
+    def reload(self):
+        config_content = config_read()
+        UserConfig.telegram_token = config_content["telegram_token"]
+        UserConfig.helper_keyword = config_content["helper_keyword"]
+        UserConfig.random_fun_keyword = config_content["random_fun_keyword"]
+        UserConfig.random_game_keyword = config_content["random_game_keyword"]
+        UserConfig.warn_keyword = config_content["warn_keyword"]
+        UserConfig.forward_pm = config_content["forward_pm"]
+        UserConfig.admin_command_start = config_content["admin_command_start"]
+        UserConfig.non_admin_answer = config_content["non_admin_answer"]
+        UserConfig.admin_command_update = config_content["admin_command_update"]
+        UserConfig.private_chat = config_content["private_chat"]
+        UserConfig.debug_chat = config_content["debug_chat"]
 
 
-def str_content_read():
-    str_content.clear()
-    for root, dirs, files in os.walk('str_content'):
+bot_config = UserConfig()
+bot_config.reload()
+
+chat_list = os.listdir("chats")
+
+
+def my_helper_read(chat):
+    file_helper_list = []
+    for root, dirs, files in os.walk(f"chats/{chat}/helper"):
         for filename in files:
-            with open('str_content/' + filename, 'r', encoding="utf-8") as strf:
-                strc = list(filter(None, strf.read().split('\n')))
-                strf.close()
-            str_content[filename[:filename.rfind('.')].lower()] = strc
-
-
-def helper_read():
-    helper_list.clear()
-    for root, dirs, files in os.walk('helper'):
-        for filename in files:
-            with open('helper/' + filename, 'r', encoding="utf-8") as helperf:
+            with open(f"chats/{chat}/helper/" + filename, 'r', encoding="utf-8") as helperf:
                 js_h = helperf.read()
                 helperf.close()
             try:
                 helper_ent = json.loads(js_h, strict=False)
-                helper_list.append(helper_ent)
+                file_helper_list.append(helper_ent)
             except json.decoder.JSONDecodeError:
                 print(json.decoder.JSONDecodeError)
                 print(js_h)
+    return file_helper_list
 
 
-str_content = {}
-helper_list = []
-str_content_read()
-helper_read()
+def my_msg_content_read(chat):
+    file_msg_content = {}
+    for root, dirs, files in os.walk(f"chats/{chat}/msg_content"):
+        for filename in files:
+            with open(f"chats/{chat}/msg_content/" + filename, 'r', encoding="utf-8") as msgf:
+                msgc = msgf.read()
+                msgf.close()
+            file_msg_content[filename[:filename.rfind('.')].lower()] = msgc
+    return file_msg_content
 
 
-def config_writer():
-    json_object = json.dumps(config, ensure_ascii=False, indent=4)
-    with open("config.json", "w", encoding='utf-8') as outfile:
+def my_str_content_read(chat):
+    file_str_content = {}
+    for root, dirs, files in os.walk(f"chats/{chat}/str_content"):
+        for filename in files:
+            with open(f"chats/{chat}/str_content/" + filename, 'r', encoding="utf-8") as strf:
+                strc = list(filter(None, strf.read().split('\n')))
+                strf.close()
+            file_str_content[filename[:filename.rfind('.')].lower()] = strc
+    return file_str_content
+
+
+def my_rp_actions_read(chat):
+    with open(f"chats/{chat}/rp_actions.json", 'r', encoding='utf-8') as rpf:
+        js = rpf.read()
+        rpf.close()
+    return json.loads(js)
+
+
+def chat_config_read(chat):
+    with open(f"chats/{chat}/config.json", 'r', encoding='utf-8') as cf:
+        js = cf.read()
+        cf.close()
+    return json.loads(js)
+
+
+def chat_config_writer(config_dict, chat):
+    json_object = json.dumps(config_dict, ensure_ascii=False, indent=4)
+    with open(f"chats/{chat}/config.json", "w", encoding='utf-8') as outfile:
         outfile.write(json_object)
         outfile.close()
+
+
+def chat_content_load(chat):
+    msg_content = my_msg_content_read(chat)
+    str_content = my_str_content_read(chat)
+    chat_config = chat_config_read(chat)
+    my_chat = ChatMy(int(chat),
+                     msg_content['hello1'],
+                     msg_content['hello1_1'],
+                     str_content['goodbye'],
+                     str_content['curse_words'],
+                     str_content['ping_words'],
+                     str_content['ping_rand'],
+                     str_content['rand_pervoe'],
+                     my_helper_read(chat),
+                     my_rp_actions_read(chat),
+                     chat_config['admin_commands'],
+                     chat_config['support_chat'])
+    return my_chat
+
+
+class ChatMy:
+    def __init__(self, chat, hello, hello_spoil, goodbye, curse_words, ping_words, ping_rand, rand_pervoe, chat_helper,
+                 rp_actions, admin_commands, support_chat):
+        self.chat = chat
+        self.hello = hello
+        self.hello_spoil = hello_spoil
+
+        self.goodbye = goodbye
+        self.curse_words = curse_words
+        self.ping_words = ping_words
+        self.ping_rand = ping_rand
+        self.rand_pervoe = rand_pervoe
+
+        self.helper = chat_helper
+        self.rp_actions = rp_actions
+
+        self.admin_commands = admin_commands
+        self.support_chat = support_chat
+
+
+chats = {}
+for chat_id in chat_list:
+    chats[int(chat_id)] = chat_content_load(chat_id)
+
+for dict_key in chats:
+    chat_id = chats[dict_key]
+    print(dict_key, chat_id.rp_actions)
+
+ignore = []
 
 
 def extract_status_change(chat_member_update: ChatMemberUpdated) -> Optional[Tuple[bool, bool]]:
@@ -177,7 +265,7 @@ def replace_letters(word=None):
     return word
 
 
-def filter_word(msg):
+def filter_word(msg, chat):
     msg = msg.split()
     for w in msg:
         w = ''.join([w[i] for i in range(len(w) - 1) if w[i + 1] != w[i]] + [
@@ -185,14 +273,14 @@ def filter_word(msg):
         w = replace_letters(w)
 
         '''admin trigger words'''
-        for word in str_content['ping_words']:
+        for word in chats[chat].ping_words:
             b = fuzz.token_sort_ratio(word, w)  # Проверяю сходство слов из списка
             if b >= 100:
                 return f"{w} | {b}% Слово-триггер: {word}"
             else:
                 pass
 
-        for word in str_content['curse_words']:
+        for word in chats[chat].curse_words:
             b = fuzz.token_sort_ratio(word, w)  # Проверяю сходство слов из списка
             if b >= 87:
                 return f"{w} | {b}% Слово-триггер: {word}"
@@ -223,29 +311,56 @@ async def antispam(msg, context):
     elif msg.caption_entities is not None:
         message_entities = msg.caption_entities
 
+    if msg.text is not None:
+        print("Msg:", msg.text)
+    elif msg.caption is not None:
+        print("Msg:", msg.caption)
+
     if msg.reply_to_message is not None:
-        if msg.reply_to_message.is_automatic_forward is not None:
+        if msg.reply_to_message.is_automatic_forward is not None:  # Detect spam link
             if msg.reply_to_message.is_automatic_forward is True:
                 for message_entity in message_entities:
                     if message_entity.type == 'url' or message_entity.type == 'text_link':
                         if await detect_chat_adm(msg) is False:
-                            for key in admins:
-                                await context.bot.send_message(chat_id=admins[key],
-                                                               text=f'URL or text_link, id: {msg.from_user.id}',
-                                                               parse_mode=ParseMode.HTML)
-                                await msg.forward(admins[key])
+                            await context.bot.send_message(chat_id=chats[msg.chat.id].support_chat,
+                                                           text=f'URL or text_link, id: {msg.from_user.id}',
+                                                           parse_mode=ParseMode.HTML)
+                            await msg.forward(chats[msg.chat.id].support_chat)
                             await context.bot.deleteMessage(msg.chat.id, msg.message_id)
                             return
-        elif re.search(config['warn_keyword'], msg.text):
-            """Warning chat members by admin"""
-
+        elif re.search(bot_config.warn_keyword, msg.text):  # Warning chat members by admin
             if await detect_chat_adm(msg) is True:
                 msg_reply = msg.reply_to_message
-                for key in admins:
-                    await context.bot.send_message(chat_id=admins[key],
-                                                   text=f'{msg.text} {msg_reply.from_user.first_name}, '
-                                                        f'{msg_reply.from_user.username}, id: {msg_reply.from_user.id}',
-                                                   parse_mode=ParseMode.HTML)
+                await context.bot.send_message(chat_id=chats[msg.chat.id].support_chat,
+                                               text=f'{msg.text} {msg_reply.from_user.first_name}, '
+                                                    f'{msg_reply.from_user.username}, id: {msg_reply.from_user.id}',
+                                               parse_mode=ParseMode.HTML)
+
+
+async def moderation_alert_sender(update, result_word, context, edited=False):
+    if edited is False:
+        from_user = update.message.from_user
+        caption = update.message.caption
+        text = update.message.text
+        link = update.message.link
+    else:
+        from_user = update.edited_message.from_user
+        caption = update.edited_message.caption
+        text = update.edited_message.text
+        link = update.edited_message.link
+
+    chat = update.effective_chat.id
+    user = f"{from_user.first_name}, {from_user.username}, {from_user.id}"
+    await context.bot.send_message(chat_id=chats[chat].support_chat,
+                                   text=f"<b>{user}</b> \n{text if text is not None else caption} \n{link}",
+                                   parse_mode=ParseMode.HTML)
+    if edited is False:
+        await context.bot.send_message(chat_id=chats[chat].support_chat, text=result_word,
+                                       parse_mode=ParseMode.HTML)
+    else:
+        await context.bot.send_message(chat_id=chats[chat].support_chat,
+                                       text=f"{result_word}, сообщение отредактировано",
+                                       parse_mode=ParseMode.HTML)
 
 
 async def track_chats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -305,47 +420,58 @@ async def greet_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE)
     was_member, is_member = result
     cause_name = update.chat_member.from_user.mention_html()
     member_name = update.chat_member.new_chat_member.user.mention_html()
+    print("greet_chat_members")
     print(update)
     chat = await context.bot.getChat(update.effective_chat.id)
     if chat.permissions is None:
         return
+
     if not was_member and is_member:
         if chat.permissions.can_send_messages:
-            for key in admins:
+            if chats[chat.id].admin_commands['notify_join']['state'] is True:
                 user = f"{update.chat_member.new_chat_member.user.first_name}, " \
                        f"{update.chat_member.new_chat_member.user.username}, " \
                        f"{update.chat_member.new_chat_member.user.id}"
                 text = "now joined."
-                await context.bot.send_message(chat_id=admins[key], text=f"‼<b>{user}</b> \n{text}‼",
+                await context.bot.send_message(chat_id=chats[chat.id].support_chat, text=f"‼<b>{user}</b> \n{text}‼",
                                                parse_mode=ParseMode.HTML)
-            if config['admin_commands']['hello']['state'] is True:
-                if config['admin_commands']['spoilers']['state'] is False:
+            if chats[chat.id].admin_commands['hello']['state'] is True:
+                if chats[chat.id].admin_commands['spoilers']['state'] is False:
                     await update.effective_chat.send_message(
-                        hello_msg1_1.format(member_name=member_name),
+                        chats[chat.id].hello.format(member_name=member_name),
                         parse_mode=ParseMode.HTML,
                     )
                 else:
                     await update.effective_chat.send_message(
-                        hello_msg1.format(member_name=member_name),
+                        chats[chat.id].hello_spoil.format(member_name=member_name),
                         parse_mode=ParseMode.HTML,
                     )
     elif was_member and not is_member:
-        if config['admin_commands']['goodbye']['state'] is True:
+        if chats[chat.id].admin_commands['goodbye']['state'] is True:
             await update.effective_chat.send_message(
-                f"{random.choice(str_content['goodbye'])}",
+                f"{random.choice(chats[chat.id].goodbye)}",
                 parse_mode=ParseMode.HTML,
             )
 
 
 async def forward(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Forward the private user message."""
-    await update.message.forward(forward_pm)
+    await update.message.forward(bot_config.forward_pm)
 
 
 async def forward_vip(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Forward from channel to private chat."""
     if update.channel_post.pinned_message is None:
-        await update.channel_post.forward(config['private_chat'])
+        await update.channel_post.forward(bot_config.private_chat)
+
+
+async def new_post(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Announce new web post"""
+    text = update.message.text.split()
+    pin_msg = await context.bot.send_message(chat_id=bot_config.private_chat,
+                                             text=f"На Бусти новый пост! Уровень подписки {text[-1]} и выше! {text[1]}"
+                                             )
+    await context.bot.pin_chat_message(pin_msg.chat.id, pin_msg.message_id)
 
 
 # Define a few command handlers. These usually take the two arguments update and
@@ -354,52 +480,60 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
     # user = update.effective_user
     await update.message.reply_html(
-        start_msg,
+        "Привет!",
         # reply_markup=ForceReply(selective=True),
     )
 
 
 async def delete_join(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Delete chat join messages"""
-    if config['admin_commands']['join']['state'] is True:
+    if chats[update.effective_chat.id].admin_commands['delete_join']['state'] is True:
         await update.message.delete()
 
 
 async def mute_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message.reply_to_message is not None:
         msg = update.message
+        mute_time = 24
+        if len(update.message.text.split()) > 1:
+            mute_time = int(update.message.text.split()[-1])
         member_id = update.message.reply_to_message.from_user.id
         if await detect_chat_adm(msg) is True:
             chat_permissions = ChatPermissions(can_send_messages=False)
-            await context.bot.restrict_chat_member(msg.chat.id, member_id, chat_permissions, time.time() + 86400)
+            await context.bot.restrict_chat_member(msg.chat.id, member_id, chat_permissions,
+                                                   time.time() + mute_time * 3600)
 
 
 async def moderation_msg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-
-    if config['admin_commands']['q&a']['state'] is True:
+    """Copy all massages from anon admin"""
+    chat = update.effective_chat.id
+    if chats[chat].admin_commands['q&a']['state'] is True:
         if update.message.sender_chat is not None:
             anon = update.message.sender_chat.id
             if anon == update.message.chat.id:
-                await update.message.copy(config['support_chat'])
+                await update.message.copy(chats[chat].support_chat)
+
+    """Role-play commands"""
+    if update.message.reply_to_message is not None:
+        user_command = [word for word in update.message.text.split()]
+        for action in chats[chat].rp_actions:
+            if user_command[0].lower() == action:
+                await context.bot.send_message(chat_id=update.message.chat.id,
+                                               text=f"{chats[chat].rp_actions[action]} "
+                                                    f"{update.message.reply_to_message.from_user.mention_html()} "
+                                                    f"{' '.join(user_command[1:])}",
+                                               parse_mode=ParseMode.HTML)
 
     """Checks channel comments for spam urls."""
     await antispam(update.message, context)
 
     """Checks chat messages for unacceptable content."""
+    print("moderation_msg")
     print(update)
     print(' ')
-    result_word = filter_word(update.message.text)
+    result_word = filter_word(update.message.text, update.effective_chat.id)
     if result_word is not False:
-        chat = await context.bot.get_chat(update.message.chat.id)
-        for key in admins:
-            if not chat.has_protected_content:
-                await update.message.forward(admins[key])
-            else:
-                user = f"{update.message.from_user.first_name}, {update.message.from_user.username}, {update.message.from_user.id}"
-                text = update.message.text
-                link = update.message.link
-                await context.bot.send_message(chat_id=admins[key], text=f"<b>{user}</b> \n{text} \n{link}", parse_mode=ParseMode.HTML)
-            await context.bot.send_message(chat_id=admins[key], text=result_word, parse_mode=ParseMode.HTML)
+        await moderation_alert_sender(update, result_word, context, edited=False)
 
 
 async def moderation_caption(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -407,19 +541,9 @@ async def moderation_caption(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await antispam(update.message, context)
 
     """Checks chat messages for unacceptable content."""
-    result_word = filter_word(update.message.caption)
+    result_word = filter_word(update.message.caption, update.effective_chat.id)
     if result_word is not False:
-        chat = await context.bot.get_chat(update.message.chat.id)
-        for key in admins:
-            if not chat.has_protected_content:
-                await update.message.forward(admins[key])
-            else:
-                user = f"{update.message.from_user.first_name}, {update.message.from_user.username}, {update.message.from_user.id}"
-                text = update.message.caption
-                link = update.message.link
-                await context.bot.send_message(chat_id=admins[key], text=f"<b>{user}</b> \n{text} \n{link}",
-                                               parse_mode=ParseMode.HTML)
-            await context.bot.send_message(chat_id=admins[key], text=result_word, parse_mode=ParseMode.HTML)
+        await moderation_alert_sender(update, result_word, context, edited=False)
 
 
 async def moderation_edited_msg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -427,26 +551,13 @@ async def moderation_edited_msg(update: Update, context: ContextTypes.DEFAULT_TY
     await antispam(update.edited_message, context)
 
     """Checks chat messages for unacceptable content."""
-    result_word = filter_word(update.edited_message.text)
+    result_word = filter_word(update.edited_message.text, update.effective_chat.id)
 
     if result_word is not False:
         print('----edited message----')
         print(update)
         print('----------------------')
-        # await update.edited_message.forward(config['debug_chat'])
-        # await context.bot.send_message(chat_id=config['debug_chat'], text=str(update.edited_message))
-        chat = await context.bot.get_chat(update.edited_message.chat.id)
-        for key in admins:
-            if not chat.has_protected_content:
-                await update.edited_message.forward(admins[key])
-            else:
-                user = f"{update.edited_message.from_user.first_name}, {update.edited_message.from_user.username}, {update.edited_message.from_user.id}"
-                text = update.edited_message.text
-                link = update.edited_message.link
-                await context.bot.send_message(chat_id=admins[key], text=f"<b>{user}</b> \n{text} \n{link}",
-                                               parse_mode=ParseMode.HTML)
-            await context.bot.send_message(chat_id=admins[key], text=f"{result_word}, сообщение отредактировано",
-                                           parse_mode=ParseMode.HTML)
+        await moderation_alert_sender(update, result_word, context, edited=True)
 
 
 async def moderation_edited_caption(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -454,37 +565,38 @@ async def moderation_edited_caption(update: Update, context: ContextTypes.DEFAUL
     await antispam(update.edited_message, context)
 
     """Checks chat messages for unacceptable content."""
-    result_word = filter_word(update.edited_message.caption)
+    result_word = filter_word(update.edited_message.caption, update.effective_chat.id)
     if result_word is not False:
-        chat = await context.bot.get_chat(update.edited_message.chat.id)
-        for key in admins:
-            if not chat.has_protected_content:
-                await update.edited_message.forward(admins[key])
-            else:
-                user = f"{update.edited_message.from_user.first_name}, {update.edited_message.from_user.username}, {update.edited_message.from_user.id}"
-                text = update.edited_message.caption
-                link = update.edited_message.link
-                await context.bot.send_message(chat_id=admins[key], text=f"<b>{user}</b> \n{text} \n{link}",
-                                               parse_mode=ParseMode.HTML)
-            await context.bot.send_message(chat_id=admins[key], text=f"{result_word}, сообщение отредактировано",
-                                           parse_mode=ParseMode.HTML)
+        await moderation_alert_sender(update, result_word, context, edited=True)
 
 
 async def random_fun(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Bot replies a random string from text file"""
-    if update.message is not None:
+    if update.message is not None and chats[update.effective_chat.id] is not None:
         await update.message.reply_html(
-            f"{random.choice(str_content['ping_rand'])}")
+            f"{random.choice(chats[update.effective_chat.id].ping_rand)}")
 
 
 async def random_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Bot replies a random number"""
+    global ignore
+    chat = update.effective_chat.id
     if update.message is not None:
         if await detect_chat_adm(update.message):
             s = update.message.text
             nums = re.findall(r'\d+', s)
             nums = [int(i) for i in nums]
             diap = list(range(nums[1], nums[2] + 1))
+            if chat == chats[chat].support_chat:
+                ignore = nums[3:]  # In admin chat, you can edit numbers to ignore
+            print(ignore)
+            for del_num in ignore:
+                if del_num in diap:
+                    diap.remove(del_num)
+                else:
+                    await update.message.reply_html(
+                        f"Числа-исключения вне диапазона.")
+                    return
             rand_nums = []
             if nums[0] > len(diap):
                 await update.message.reply_html(
@@ -501,44 +613,47 @@ async def random_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Bot control settings"""
     msg = update.message
+    chat = update.effective_chat.id
     if await detect_chat_adm(msg) is True:
         admin_message = msg.text
-        if admin_message == f"{admin_command_start}{config['admin_command_update']}":
-            helper_read()
-            str_content_read()
+        if admin_message == f"{bot_config.admin_command_start}{bot_config.admin_command_update}":
+            bot_config.reload()
+            chats[chat] = chat_content_load(chat)
             await update.message.reply_html(
                 'Ok')
             return
-        for command in config['admin_commands']:
-            if admin_message == f"{admin_command_start}{command}_off" and config['admin_commands'][command]['state'] is True:
+        for command in chats[chat].admin_commands:
+            if admin_message == f"{bot_config.admin_command_start}{command}_off" and \
+                    chats[chat].admin_commands[command]['state'] is True:
                 await update.effective_chat.send_message(
-                    config['admin_commands'][command]['answer_off'],
+                    chats[chat].admin_commands[command]['answer_off'],
                     parse_mode=ParseMode.HTML,
                 )
-                config['admin_commands'][command]['state'] = False
-                config_writer()
+                chats[chat].admin_commands[command]['state'] = False
+                chat_config_writer({'admin_commands': chats[chat].admin_commands}, chat)
                 return
-            elif admin_message == f"{admin_command_start}{command}_on" and config['admin_commands'][command]['state'] is False:
+            elif admin_message == f"{bot_config.admin_command_start}{command}_on" and \
+                    chats[chat].admin_commands[command]['state'] is False:
                 await update.effective_chat.send_message(
-                    config['admin_commands'][command]['answer_on'],
+                    chats[chat].admin_commands[command]['answer_on'],
                     parse_mode=ParseMode.HTML,
                 )
-                config['admin_commands'][command]['state'] = True
-                config_writer()
+                chats[chat].admin_commands[command]['state'] = True
+                chat_config_writer({'admin_commands': chats[chat].admin_commands}, chat)
                 return
     else:
-        await update.message.reply_html(config['non_admin_answer'])
+        await update.message.reply_html(bot_config.non_admin_answer)
 
 
 async def helper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         if update.message is not None:
-            for helper_entity in helper_list:
+            for helper_entity in chats[update.effective_chat.id].helper:
                 keyword = replace_letters(update.message.text)
                 if helper_entity['command'] == keyword:
                     if helper_entity['delay'] == 'Yes':
                         await update.message.reply_html(
-                            f"{random.choice(str_content['rand_pervoe'])}")
+                            f"{random.choice(chats[update.effective_chat.id].rand_pervoe)}")
                         time.sleep(10)
                     await update.message.reply_html(
                         helper_entity['content'],
@@ -554,7 +669,7 @@ async def helper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 def main() -> None:
     """Start the bot."""
     # Create the Application and pass it your bot's token.
-    application = Application.builder().token(telegram_token).build()
+    application = Application.builder().token(bot_config.telegram_token).build()
 
     # Keep track of which chats the bot is in
     application.add_handler(ChatMemberHandler(track_chats, ChatMemberHandler.MY_CHAT_MEMBER))
@@ -572,25 +687,35 @@ def main() -> None:
     # VIP chat special
     application.add_handler(MessageHandler(filters.ChatType.CHANNEL, forward_vip))
 
+    # New post announce
+    application.add_handler(MessageHandler(
+        filters.ChatType.GROUPS & filters.Chat(-1001540432154) & filters.Regex(f"^Бусти https://boosty.to/"),
+        new_post))
+
     # Admin commands
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.Regex(f"^{admin_command_start}"),
-                                           adm_chat_commands))
+    application.add_handler(
+        MessageHandler(
+            filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.Regex(f"^{bot_config.admin_command_start}"),
+            adm_chat_commands))
 
     # Mute users
     application.add_handler(
-        MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.Regex(f"^mute"), mute_user))
+        MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.Regex(f"^[M|m]ute"), mute_user))
 
     # Random fun messages
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(random_fun_keyword), random_fun))
+    application.add_handler(
+        MessageHandler(filters.ChatType.GROUPS & filters.Regex(bot_config.random_fun_keyword), random_fun))
 
     # Random numbers game
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(random_game_keyword), random_game))
+    application.add_handler(
+        MessageHandler(filters.ChatType.GROUPS & filters.Regex(bot_config.random_game_keyword), random_game))
 
     # Chat content request
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(helper_keyword), helper))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(bot_config.helper_keyword), helper))
 
     # Delete chat join messages
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.StatusUpdate.NEW_CHAT_MEMBERS, delete_join))
+    application.add_handler(
+        MessageHandler(filters.ChatType.GROUPS & filters.StatusUpdate.NEW_CHAT_MEMBERS, delete_join))
 
     # Moderating chats
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.TEXT,
@@ -599,8 +724,9 @@ def main() -> None:
                                            moderation_edited_msg))
     application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.CAPTION,
                                            moderation_caption))
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.EDITED_MESSAGE & filters.CAPTION,
-                                           moderation_edited_caption))
+    application.add_handler(
+        MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.EDITED_MESSAGE & filters.CAPTION,
+                       moderation_edited_caption))
 
     # Run the bot until the user presses Ctrl-C
     # We pass 'allowed_updates' handle *all* updates including `chat_member` updates
