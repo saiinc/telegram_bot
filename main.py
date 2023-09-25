@@ -222,8 +222,10 @@ class ChatMy:
 
 
 chats = {}
+support_chats = {}
 for chat_id in chat_list:
     chats[int(chat_id)] = chat_content_load(chat_id)
+    support_chats[chats[int(chat_id)].support_chat] = int(chat_id)
 
 for dict_key in chats:
     chat_id = chats[dict_key]
@@ -646,14 +648,18 @@ async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 
 async def helper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if chats[update.update.effective_chat.id] is not None:
+        chat = update.update.effective_chat.id
+    else:
+        chat = support_chats[update.update.effective_chat.id]
     try:
         if update.message is not None:
-            for helper_entity in chats[update.effective_chat.id].helper:
+            for helper_entity in chats[chat].helper:
                 keyword = replace_letters(update.message.text)
                 if helper_entity['command'] == keyword:
                     if helper_entity['delay'] == 'Yes':
                         await update.message.reply_html(
-                            f"{random.choice(chats[update.effective_chat.id].rand_pervoe)}")
+                            f"{random.choice(chats[chat].rand_pervoe)}")
                         time.sleep(10)
                     await update.message.reply_html(
                         helper_entity['content'],
@@ -679,7 +685,7 @@ def main() -> None:
     application.add_handler(ChatMemberHandler(greet_chat_members, ChatMemberHandler.CHAT_MEMBER))
 
     # on different commands - answer in Telegram
-    application.add_handler(CommandHandler("start", start, filters.ChatType.PRIVATE))
+    application.add_handler(CommandHandler("start", start, filters.ChatType.PRIVATE & filters.UpdateType.MESSAGE))
 
     # Forward the pm messages on Telegram
     application.add_handler(MessageHandler(filters.ChatType.PRIVATE, forward))
@@ -689,7 +695,7 @@ def main() -> None:
 
     # New post announce
     application.add_handler(MessageHandler(
-        filters.ChatType.GROUPS & filters.Chat(-1001540432154) & filters.Regex(f"^Бусти https://boosty.to/"),
+        filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.Chat(-1001540432154) & filters.Regex(f"^Бусти https://boosty.to/"),
         new_post))
 
     # Admin commands
@@ -704,14 +710,14 @@ def main() -> None:
 
     # Random fun messages
     application.add_handler(
-        MessageHandler(filters.ChatType.GROUPS & filters.Regex(bot_config.random_fun_keyword), random_fun))
+        MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.Regex(bot_config.random_fun_keyword), random_fun))
 
     # Random numbers game
     application.add_handler(
-        MessageHandler(filters.ChatType.GROUPS & filters.Regex(bot_config.random_game_keyword), random_game))
+        MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.Regex(bot_config.random_game_keyword), random_game))
 
     # Chat content request
-    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.Regex(bot_config.helper_keyword), helper))
+    application.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.Regex(bot_config.helper_keyword), helper))
 
     # Delete chat join messages
     application.add_handler(
