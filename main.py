@@ -9,11 +9,12 @@ Usage:
 Press Ctrl-C on the command line or send a signal to the process to stop the
 bot.
 """
-
+import datetime
 import os
 import logging
 from typing import Optional, Tuple
 
+import pytz
 from telegram import __version__ as TG_VER, ChatPermissions
 
 try:
@@ -223,13 +224,14 @@ class ChatMy:
 
 chats = {}
 support_chats = {}
-for chat_id in chat_list:
-    chats[int(chat_id)] = chat_content_load(chat_id)
-    support_chats[chats[int(chat_id)].support_chat] = int(chat_id)
+
+for user_chat_id in chat_list:
+    chats[int(user_chat_id)] = chat_content_load(user_chat_id)
+    support_chats[chats[int(user_chat_id)].support_chat] = int(user_chat_id)
 
 for dict_key in chats:
-    chat_id = chats[dict_key]
-    print(dict_key, chat_id.rp_actions)
+    user_chat_id = chats[dict_key]
+    print(dict_key, user_chat_id.support_chat, user_chat_id.rp_actions)
 
 ignore = []
 
@@ -268,6 +270,10 @@ def replace_letters(word=None):
 
 
 def filter_word(msg, chat):
+    if chats.get(chat) is not None:
+        pass
+    else:
+        chat = support_chats[chat]
     msg = msg.split()
     for w in msg:
         w = ''.join([w[i] for i in range(len(w) - 1) if w[i + 1] != w[i]] + [
@@ -313,25 +319,21 @@ async def antispam(msg, context):
     elif msg.caption_entities is not None:
         message_entities = msg.caption_entities
 
-    if msg.text is not None:
-        print("Msg:", msg.text)
-    elif msg.caption is not None:
-        print("Msg:", msg.caption)
-
     if msg.reply_to_message is not None:
-        if msg.reply_to_message.is_automatic_forward is not None:  # Detect spam link
-            if msg.reply_to_message.is_automatic_forward is True:
-                for message_entity in message_entities:
-                    if message_entity.type == 'url' or message_entity.type == 'text_link':
-                        if await detect_chat_adm(msg) is False:
+        if await detect_chat_adm(msg) is False:
+            if msg.reply_to_message.is_automatic_forward is not None:  # Detect spam link
+                if msg.reply_to_message.is_automatic_forward is True:
+                    for message_entity in message_entities:
+                        if message_entity.type == 'url' or message_entity.type == 'text_link':
+
                             await context.bot.send_message(chat_id=chats[msg.chat.id].support_chat,
                                                            text=f'URL or text_link, id: {msg.from_user.id}',
                                                            parse_mode=ParseMode.HTML)
                             await msg.forward(chats[msg.chat.id].support_chat)
                             await context.bot.deleteMessage(msg.chat.id, msg.message_id)
                             return
-        elif re.search(bot_config.warn_keyword, msg.text):  # Warning chat members by admin
-            if await detect_chat_adm(msg) is True:
+        else:
+            if msg.text is not None and re.search(bot_config.warn_keyword, msg.text):  # Warning chat members by admin
                 msg_reply = msg.reply_to_message
                 await context.bot.send_message(chat_id=chats[msg.chat.id].support_chat,
                                                text=f'{msg.text} {msg_reply.from_user.first_name}, '
@@ -351,7 +353,10 @@ async def moderation_alert_sender(update, result_word, context, edited=False):
         text = update.edited_message.text
         link = update.edited_message.link
 
-    chat = update.effective_chat.id
+    if chats.get(update.effective_chat.id) is not None:
+        chat = update.effective_chat.id
+    else:
+        chat = support_chats[update.effective_chat.id]
     user = f"{from_user.first_name}, {from_user.username}, {from_user.id}"
     await context.bot.send_message(chat_id=chats[chat].support_chat,
                                    text=f"<b>{user}</b> \n{text if text is not None else caption} \n{link}",
@@ -425,33 +430,39 @@ async def greet_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE)
     print("greet_chat_members")
     print(update)
     chat = await context.bot.getChat(update.effective_chat.id)
+    print(chat)
     if chat.permissions is None:
         return
 
+    if chats.get(chat.id) is not None:
+        chat_id = chat.id
+    else:
+        chat_id = support_chats[chat.id]
+
     if not was_member and is_member:
         if chat.permissions.can_send_messages:
-            if chats[chat.id].admin_commands['notify_join']['state'] is True:
+            if chats[chat_id].admin_commands['notify_join']['state'] is True:
                 user = f"{update.chat_member.new_chat_member.user.first_name}, " \
                        f"{update.chat_member.new_chat_member.user.username}, " \
                        f"{update.chat_member.new_chat_member.user.id}"
                 text = "now joined."
-                await context.bot.send_message(chat_id=chats[chat.id].support_chat, text=f"‼<b>{user}</b> \n{text}‼",
+                await context.bot.send_message(chat_id=chats[chat_id].support_chat, text=f"‼<b>{user}</b> \n{text}‼",
                                                parse_mode=ParseMode.HTML)
-            if chats[chat.id].admin_commands['hello']['state'] is True:
-                if chats[chat.id].admin_commands['spoilers']['state'] is False:
+            if chats[chat_id].admin_commands['hello']['state'] is True:
+                if chats[chat_id].admin_commands['spoilers']['state'] is False:
                     await update.effective_chat.send_message(
-                        chats[chat.id].hello.format(member_name=member_name),
+                        chats[chat_id].hello.format(member_name=member_name),
                         parse_mode=ParseMode.HTML,
                     )
                 else:
                     await update.effective_chat.send_message(
-                        chats[chat.id].hello_spoil.format(member_name=member_name),
+                        chats[chat_id].hello_spoil.format(member_name=member_name),
                         parse_mode=ParseMode.HTML,
                     )
     elif was_member and not is_member:
-        if chats[chat.id].admin_commands['goodbye']['state'] is True:
+        if chats[chat_id].admin_commands['goodbye']['state'] is True:
             await update.effective_chat.send_message(
-                f"{random.choice(chats[chat.id].goodbye)}",
+                f"{random.choice(chats[chat_id].goodbye)}",
                 parse_mode=ParseMode.HTML,
             )
 
@@ -489,7 +500,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def delete_join(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Delete chat join messages"""
-    if chats[update.effective_chat.id].admin_commands['delete_join']['state'] is True:
+    if chats.get(update.effective_chat.id) is not None:
+        chat = update.effective_chat.id
+    else:
+        chat = support_chats[update.effective_chat.id]
+    if chats[chat].admin_commands['delete_join']['state'] is True:
         await update.message.delete()
 
 
@@ -508,7 +523,10 @@ async def mute_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def moderation_msg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Copy all massages from anon admin"""
-    chat = update.effective_chat.id
+    if chats.get(update.effective_chat.id) is not None:
+        chat = update.effective_chat.id
+    else:
+        chat = support_chats[update.effective_chat.id]
     if chats[chat].admin_commands['q&a']['state'] is True:
         if update.message.sender_chat is not None:
             anon = update.message.sender_chat.id
@@ -574,22 +592,27 @@ async def moderation_edited_caption(update: Update, context: ContextTypes.DEFAUL
 
 async def random_fun(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Bot replies a random string from text file"""
-    if update.message is not None and chats[update.effective_chat.id] is not None:
-        await update.message.reply_html(
-            f"{random.choice(chats[update.effective_chat.id].ping_rand)}")
+    if chats.get(update.effective_chat.id) is not None:
+        chat = update.effective_chat.id
+    else:
+        chat = support_chats[update.effective_chat.id]
+    await update.message.reply_html(random.choice(chats[chat].ping_rand))
 
 
 async def random_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Bot replies a random number"""
     global ignore
-    chat = update.effective_chat.id
+    if chats.get(update.effective_chat.id) is not None:
+        chat = update.effective_chat.id
+    else:
+        chat = support_chats[update.effective_chat.id]
     if update.message is not None:
         if await detect_chat_adm(update.message):
             s = update.message.text
             nums = re.findall(r'\d+', s)
             nums = [int(i) for i in nums]
             diap = list(range(nums[1], nums[2] + 1))
-            if chat == chats[chat].support_chat:
+            if update.effective_chat.id == chats[chat].support_chat:
                 ignore = nums[3:]  # In admin chat, you can edit numbers to ignore
             print(ignore)
             for del_num in ignore:
@@ -601,8 +624,9 @@ async def random_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                     return
             rand_nums = []
             if nums[0] > len(diap):
-                await update.message.reply_html(
-                    f"Количество чисел больше диапазона.")
+                if update.effective_chat.id == chats[chat].support_chat:
+                    await update.message.reply_html(
+                        f"Количество чисел больше диапазона.")
             else:
                 for i in range(nums[0]):
                     rand_num = random.choice(range(len(diap)))
@@ -615,12 +639,22 @@ async def random_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Bot control settings"""
     msg = update.message
-    chat = update.effective_chat.id
+    if chats.get(update.effective_chat.id) is not None:
+        chat = update.effective_chat.id
+    else:
+        chat = support_chats[update.effective_chat.id]
     if await detect_chat_adm(msg) is True:
         admin_message = msg.text
         if admin_message == f"{bot_config.admin_command_start}{bot_config.admin_command_update}":
             bot_config.reload()
             chats[chat] = chat_content_load(chat)
+            current_jobs = context.job_queue.get_jobs_by_name(str(chat))
+            if chats[chat].admin_commands['night_mute']['state'] is True and not current_jobs:
+                mute_jobs(context.job_queue, chat)
+            elif chats[chat].admin_commands['night_mute']['state'] is False and current_jobs:
+                for job in current_jobs:
+                    job.schedule_removal()
+
             await update.message.reply_html(
                 'Ok')
             return
@@ -632,7 +666,7 @@ async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                     parse_mode=ParseMode.HTML,
                 )
                 chats[chat].admin_commands[command]['state'] = False
-                chat_config_writer({'admin_commands': chats[chat].admin_commands}, chat)
+                chat_config_writer({'support_chat': chats[chat].support_chat, 'admin_commands': chats[chat].admin_commands}, chat)
                 return
             elif admin_message == f"{bot_config.admin_command_start}{command}_on" and \
                     chats[chat].admin_commands[command]['state'] is False:
@@ -641,17 +675,17 @@ async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                     parse_mode=ParseMode.HTML,
                 )
                 chats[chat].admin_commands[command]['state'] = True
-                chat_config_writer({'admin_commands': chats[chat].admin_commands}, chat)
+                chat_config_writer({'support_chat': chats[chat].support_chat, 'admin_commands': chats[chat].admin_commands}, chat)
                 return
     else:
         await update.message.reply_html(bot_config.non_admin_answer)
 
 
 async def helper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if chats[update.update.effective_chat.id] is not None:
-        chat = update.update.effective_chat.id
+    if chats.get(update.effective_chat.id) is not None:
+        chat = update.effective_chat.id
     else:
-        chat = support_chats[update.update.effective_chat.id]
+        chat = support_chats[update.effective_chat.id]
     try:
         if update.message is not None:
             for helper_entity in chats[chat].helper:
@@ -672,10 +706,46 @@ async def helper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         print(update)
 
 
+async def chat_mute(context: ContextTypes.DEFAULT_TYPE):
+    job = context.job
+    await context.bot.set_chat_permissions(chat_id=job.chat_id, permissions=ChatPermissions(can_send_messages=False))
+    await context.bot.send_message(chat_id=job.chat_id, text='Чат закрывается на ночь.')
+
+
+async def chat_unmute(context: ContextTypes.DEFAULT_TYPE):
+    job = context.job
+    await context.bot.set_chat_permissions(chat_id=job.chat_id, permissions=ChatPermissions(can_send_messages=True,
+                                                                                            can_send_audios=True,
+                                                                                            can_send_videos=True,
+                                                                                            can_send_documents=True,
+                                                                                            can_send_polls=True,
+                                                                                            can_send_video_notes=True,
+                                                                                            can_send_voice_notes=True,
+                                                                                            can_send_other_messages=True,
+                                                                                            can_add_web_page_previews=True,
+                                                                                            can_send_photos=True))
+    await context.bot.send_message(chat_id=job.chat_id, text='Доброе утро! Чат открыт.')
+
+
+def mute_jobs(job_queue, chat):
+    job_queue.run_daily(chat_mute, datetime.time(hour=0, minute=0, tzinfo=pytz.timezone("Europe/Moscow")), chat_id=chat, name=str(chat))
+    job_queue.run_daily(chat_unmute, datetime.time(hour=7, minute=0, tzinfo=pytz.timezone("Europe/Moscow")), chat_id=chat, name=str(chat))
+
+
 def main() -> None:
     """Start the bot."""
     # Create the Application and pass it your bot's token.
     application = Application.builder().token(bot_config.telegram_token).build()
+
+    # Chats night mute scheduler
+    job_queue = application.job_queue
+    for chat in chats:
+        print(chats[chat].admin_commands['night_mute']['state'])
+        if chats[chat].admin_commands['night_mute']['state'] is True:
+            mute_jobs(job_queue, chat)
+        print(job_queue.get_jobs_by_name(str(chat)))
+    for job in job_queue.jobs():
+        print(job.chat_id, job.name)
 
     # Keep track of which chats the bot is in
     application.add_handler(ChatMemberHandler(track_chats, ChatMemberHandler.MY_CHAT_MEMBER))
@@ -699,8 +769,7 @@ def main() -> None:
         new_post))
 
     # Admin commands
-    application.add_handler(
-        MessageHandler(
+    application.add_handler(MessageHandler(
             filters.ChatType.GROUPS & filters.UpdateType.MESSAGE & filters.Regex(f"^{bot_config.admin_command_start}"),
             adm_chat_commands))
 
@@ -733,6 +802,7 @@ def main() -> None:
     application.add_handler(
         MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.EDITED_MESSAGE & filters.CAPTION,
                        moderation_edited_caption))
+
 
     # Run the bot until the user presses Ctrl-C
     # We pass 'allowed_updates' handle *all* updates including `chat_member` updates
