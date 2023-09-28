@@ -427,10 +427,7 @@ async def greet_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE)
     was_member, is_member = result
     cause_name = update.chat_member.from_user.mention_html()
     member_name = update.chat_member.new_chat_member.user.mention_html()
-    print("greet_chat_members")
-    print(update)
     chat = await context.bot.getChat(update.effective_chat.id)
-    print(chat)
     if chat.permissions is None:
         return
 
@@ -548,9 +545,6 @@ async def moderation_msg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await antispam(update.message, context)
 
     """Checks chat messages for unacceptable content."""
-    print("moderation_msg")
-    print(update)
-    print(' ')
     result_word = filter_word(update.message.text, update.effective_chat.id)
     if result_word is not False:
         await moderation_alert_sender(update, result_word, context, edited=False)
@@ -574,9 +568,6 @@ async def moderation_edited_msg(update: Update, context: ContextTypes.DEFAULT_TY
     result_word = filter_word(update.edited_message.text, update.effective_chat.id)
 
     if result_word is not False:
-        print('----edited message----')
-        print(update)
-        print('----------------------')
         await moderation_alert_sender(update, result_word, context, edited=True)
 
 
@@ -651,10 +642,13 @@ async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             current_jobs = context.job_queue.get_jobs_by_name(str(chat))
             if chats[chat].admin_commands['night_mute']['state'] is True and not current_jobs:
                 mute_jobs(context.job_queue, chat)
+                print('Jobs create')
             elif chats[chat].admin_commands['night_mute']['state'] is False and current_jobs:
                 for job in current_jobs:
+                    job.enabled = False
                     job.schedule_removal()
-
+                    print('Jobs destroy')
+            print(current_jobs)
             await update.message.reply_html(
                 'Ok')
             return
@@ -709,7 +703,11 @@ async def helper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def chat_mute(context: ContextTypes.DEFAULT_TYPE):
     job = context.job
     await context.bot.set_chat_permissions(chat_id=job.chat_id, permissions=ChatPermissions(can_send_messages=False))
-    await context.bot.send_message(chat_id=job.chat_id, text='Чат закрывается на ночь.')
+    if chats[job.chat_id].admin_commands['hello']['state'] is True:
+        chats[job.chat_id].admin_commands['hello']['state'] = False
+    if chats[job.chat_id].admin_commands['goodbye']['state'] is True:
+        chats[job.chat_id].admin_commands['goodbye']['state'] = False
+    await context.bot.send_message(chat_id=job.chat_id, text='Чат закрывается. Спокойной ночи! ✨')
 
 
 async def chat_unmute(context: ContextTypes.DEFAULT_TYPE):
@@ -724,7 +722,8 @@ async def chat_unmute(context: ContextTypes.DEFAULT_TYPE):
                                                                                             can_send_other_messages=True,
                                                                                             can_add_web_page_previews=True,
                                                                                             can_send_photos=True))
-    await context.bot.send_message(chat_id=job.chat_id, text='Доброе утро! Чат открыт.')
+
+    await context.bot.send_message(chat_id=job.chat_id, text='Чат открыт. Доброе утро! 🌻')
 
 
 def mute_jobs(job_queue, chat):
@@ -802,7 +801,6 @@ def main() -> None:
     application.add_handler(
         MessageHandler(filters.ChatType.GROUPS & filters.UpdateType.EDITED_MESSAGE & filters.CAPTION,
                        moderation_edited_caption))
-
 
     # Run the bot until the user presses Ctrl-C
     # We pass 'allowed_updates' handle *all* updates including `chat_member` updates
