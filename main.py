@@ -621,7 +621,10 @@ async def moderation_msg(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     """Checks chat messages for unacceptable content."""
     result_word = filter_word(update.effective_message.text, update.effective_chat.id)
     if result_word is not False:
-        await moderation_alert_sender(update, result_word, context, edited=False)
+        if update.edited_message is None:
+            await moderation_alert_sender(update, result_word, context, edited=False)
+        else:
+            await moderation_alert_sender(update, result_word, context, edited=True)
     else:
         result_word = delete_word(update.effective_message.text, update.effective_chat.id)
         if result_word is not False:
@@ -636,7 +639,10 @@ async def moderation_caption(update: Update, context: ContextTypes.DEFAULT_TYPE)
     """Checks chat messages for unacceptable content."""
     result_word = filter_word(update.effective_message.caption, update.effective_chat.id)
     if result_word is not False:
-        await moderation_alert_sender(update, result_word, context, edited=False)
+        if update.edited_message is None:
+            await moderation_alert_sender(update, result_word, context, edited=False)
+        else:
+            await moderation_alert_sender(update, result_word, context, edited=True)
     else:
         result_word = delete_word(update.effective_message.caption, update.effective_chat.id)
         if result_word is not False:
