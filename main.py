@@ -712,15 +712,13 @@ async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             current_jobs = context.job_queue.get_jobs_by_name(str(chat))
             if chats[chat].admin_commands['night_mute']['state'] is True and not current_jobs:
                 mute_jobs(context.job_queue, chat)
-                print('Jobs create')
+                await update.message.reply_html('Jobs created')
             elif chats[chat].admin_commands['night_mute']['state'] is False and current_jobs:
                 for job in current_jobs:
                     job.enabled = False
                     job.schedule_removal()
-                    print('Jobs destroy')
+                    await update.message.reply_html('Jobs destroyed')
             print(current_jobs)
-            await update.message.reply_html(
-                'Ok')
             return
         for command in chats[chat].admin_commands:
             if admin_message == f"{bot_config.admin_command_start}{command}_off" and \
