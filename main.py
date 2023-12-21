@@ -326,12 +326,13 @@ def filter_word(msg, chat):
         w = replace_letters(w)
 
         '''admin trigger words'''
-        for word in chats[chat].ping_words:
-            b = fuzz.token_sort_ratio(word, w)  # Проверяю сходство слов из списка
-            if b >= 100:
-                return f"{w} | {b}% Слово-триггер: {word}"
-            else:
-                pass
+        if chats[chat].admin_commands["ping_words"]["state"] is True:
+            for word in chats[chat].ping_words:
+                b = fuzz.token_sort_ratio(word, w)  # Проверяю сходство слов из списка
+                if b >= 100:
+                    return f"{w} | {b}% Слово-триггер: {word}"
+                else:
+                    pass
 
         for word in chats[chat].curse_words:
             b = fuzz.token_sort_ratio(word, w)  # Проверяю сходство слов из списка
@@ -355,6 +356,17 @@ async def detect_chat_adm(msg):
 
 
 async def antispam(msg, context):
+    """Delete messages from user as channel's sender"""
+    if msg.sender_chat is not None:
+        if msg.sender_chat.id != msg.chat.id:
+            if msg.reply_to_message is None:
+                await context.bot.deleteMessage(msg.chat.id, msg.message_id)
+                return
+            '''if msg.reply_to_message is not None:
+                if msg.reply_to_message.is_automatic_forward is None:
+                    if msg.message_thread_id is None:
+                        await msg.reply_html("to delete")'''
+
     """Delete spam channel messages"""
     message_entities = None
 
@@ -713,14 +725,24 @@ async def adm_chat_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             if chats[chat].admin_commands['night_mute']['state'] is True and not current_jobs:
                 mute_jobs(context.job_queue, chat)
                 await update.message.reply_html('Jobs created')
+                return
             elif chats[chat].admin_commands['night_mute']['state'] is False and current_jobs:
                 for job in current_jobs:
                     job.enabled = False
                     job.schedule_removal()
-                    await update.message.reply_html('Jobs destroyed')
+                    await update.message.reply_html('Job destroyed')
+                    return
             print(current_jobs)
+            await update.message.reply_html(
+                'Ok')
             return
         for command in chats[chat].admin_commands:
+            if admin_message == bot_config.admin_command_start:
+                command_list = ""
+                for commands in chats[chat].admin_commands:
+                    command_list = command_list + f"{commands}: {str(chats[chat].admin_commands[commands]['state'])} \n"
+                await update.message.reply_html(command_list)
+                return
             if admin_message == f"{bot_config.admin_command_start}{command}_off" and \
                     chats[chat].admin_commands[command]['state'] is True:
                 await update.effective_chat.send_message(
