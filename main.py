@@ -799,7 +799,7 @@ async def chat_mute(context: ContextTypes.DEFAULT_TYPE):
         chats[job.chat_id].admin_commands['hello']['state'] = False
     if chats[job.chat_id].admin_commands['goodbye']['state'] is True:
         chats[job.chat_id].admin_commands['goodbye']['state'] = False
-    await context.bot.send_message(chat_id=job.chat_id, text='Чат закрывается. Спокойной ночи! ✨')
+    await context.bot.send_message(chat_id=job.chat_id, text='Комментарии закрываются! Спокойной ночи. ✨')
 
 
 async def chat_unmute(context: ContextTypes.DEFAULT_TYPE):
@@ -815,13 +815,13 @@ async def chat_unmute(context: ContextTypes.DEFAULT_TYPE):
                                                                                             can_add_web_page_previews=True,
                                                                                             can_send_photos=True))
 
-    await context.bot.send_message(chat_id=job.chat_id, text='Чат открыт. Доброе утро! 🌻')
+    await context.bot.send_message(chat_id=job.chat_id, text='Комментарии открыты! Доброе утро. 🌼')
 
 
 def mute_jobs(job_queue, chat):
-    job_queue.run_daily(chat_mute, datetime.time(hour=0, minute=0, tzinfo=pytz.timezone("Europe/Moscow")),
+    job_queue.run_daily(chat_mute, datetime.time(hour=21, minute=30, tzinfo=pytz.timezone("Europe/Moscow")),
                         chat_id=chat, name=str(chat))
-    job_queue.run_daily(chat_unmute, datetime.time(hour=7, minute=0, tzinfo=pytz.timezone("Europe/Moscow")),
+    job_queue.run_daily(chat_unmute, datetime.time(hour=9, minute=0, tzinfo=pytz.timezone("Europe/Moscow")),
                         chat_id=chat, name=str(chat))
 
 
