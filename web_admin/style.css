@@ -1,0 +1,357 @@
+/* Базовые стили для всего документа */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+}
+
+#wrapper {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    background-color: #f0f0f0;
+    padding: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+main {
+    margin-bottom: 20px;
+}
+
+footer {
+    text-align: center;
+    padding: 20px;
+    border-top: 1px solid #ccc;
+}
+
+/* Стили для карточек чатов */
+.chats-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px 0;
+}
+
+.chats-container h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #333;
+}
+
+.chat-card {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.chat-header h3 {
+    margin: 0;
+    color: #333;
+}
+
+.chat-id {
+    background: #007bff;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.chat-description {
+    margin-bottom: 10px;
+    color: #666;
+    font-style: italic;
+}
+
+.chat-support {
+    margin-bottom: 15px;
+    color: #007bff;
+    font-weight: bold;
+}
+
+.chat-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.links-group {
+    flex: 1;
+    min-width: 250px;
+    background: #fff;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #eee;
+}
+
+.links-group h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #007bff;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+}
+
+.links-group a {
+    display: inline-block;
+    padding: 8px 12px;
+    margin: 4px 2px;
+    background-color: #e9ecef;
+    color: #007bff;
+    text-decoration: none;
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+    transition: all 0.3s ease;
+}
+
+.links-group a:hover {
+    background-color: #007bff;
+    color: white;
+    border-color: #0056b3;
+    text-decoration: none;
+}
+
+.links-group a:active {
+    background-color: #0056b3;
+    border-color: #004085;
+    transform: translateY(1px);
+}
+
+/* Стили для кнопок */
+input[type="submit"],
+input[type="button"],
+input[type="reset"],
+button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+
+input[type="submit"]:hover,
+input[type="button"]:hover,
+input[type="reset"]:hover,
+button:hover {
+    background-color: #0056b3;
+}
+
+input[type="submit"]:active,
+input[type="button"]:active,
+input[type="reset"]:active,
+button:active {
+    background-color: #004085;
+    transform: translateY(1px);
+}
+
+input[type="submit"]:focus,
+input[type="button"]:focus,
+input[type="reset"]:focus,
+button:focus {
+    outline: 2px solid #0056b3;
+    outline-offset: 2px;
+}
+
+.no-chats {
+    text-align: center;
+    padding: 50px 20px;
+}
+
+.no-chats h2 {
+    color: #666;
+}
+
+/* Старые стили для таблиц */
+main table td, main table th {
+    border: 1px solid black;
+    padding: 10px;
+}
+
+main form textarea {
+    width: 100%;
+    max-width: 70%;
+    min-width: 50%;
+    height: 45vh;
+    box-sizing: border-box;
+    padding: 10px;
+    /*border: 1px solid #ccc;*/
+    border-radius: 4px;
+    resize: vertical;
+}
+
+/* Стили для формы логина */
+.login-form-container {
+    max-width: 400px;
+    margin: 20px auto;
+    padding: 20px;
+}
+
+.login-form-container form {
+    display: flex;
+    flex-direction: column;
+}
+
+.login-form-container label {
+    margin-bottom: 10px;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+/* Мобильная верстка для формы логина */
+main form input[type="password"],
+main form input[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    box-sizing: border-box;
+    font-size: 16px; /* Увеличиваем размер шрифта для лучшей читаемости на мобильных */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* Универсальные стили для мобильных устройств */
+@media screen and (max-width: 768px) {
+    main form textarea {
+        min-width: 100%;
+    }
+    
+    /* Дополнительные стили для мобильных устройств */
+    main {
+        padding: 10px;
+    }
+    
+    header {
+        padding: 15px;
+        font-size: 18px;
+    }
+    
+    main form input[type="password"],
+    main form input[type="submit"] {
+        font-size: 18px; /* Еще больше увеличиваем размер шрифта на мобильных */
+        padding: 15px;
+        margin: 10px 0;
+    }
+    
+    /* Мобильные стили для формы логина */
+    .login-form-container {
+        max-width: 90%;
+        margin: 20px auto;
+        padding: 20px;
+    }
+    
+    .login-form-container label {
+        font-size: 18px;
+        margin-bottom: 15px;
+        display: block;
+    }
+    
+    /* Дополнительные стили для мобильных */
+    body {
+        font-size: 16px;
+    }
+    
+    #wrapper {
+        min-width: 100vw;
+        min-height: 100vh;
+    }
+}
+
+/* Стили для очень маленьких экранов */
+@media screen and (max-width: 480px) {
+    .login-form-container {
+        max-width: 95%;
+        margin: 15px auto;
+        padding: 15px;
+    }
+    
+    .login-form-container label {
+        font-size: 20px;
+        margin-bottom: 20px;
+    }
+    
+    main form input[type="password"],
+    main form input[type="submit"] {
+        font-size: 20px;
+        padding: 18px;
+        margin: 12px 0;
+    }
+    
+    header {
+        text-align: center;
+        font-size: 20px;
+    }
+    
+    /* Адаптивность для карточек чатов на мобильных */
+    .chat-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .chat-id {
+        margin-top: 10px;
+    }
+    
+    .chat-links {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .links-group {
+        min-width: 100%;
+    }
+}
+
+/* Стили для кликабельных заголовков таблиц (первые 3 столбца) */
+main table thead th:nth-child(1) .sortable-header,
+main table thead th:nth-child(2) .sortable-header,
+main table thead th:nth-child(3) .sortable-header {
+    cursor: pointer;
+    color: #007bff !important;
+    text-decoration: underline !important;
+    user-select: none;
+    display: inline-block;
+}
+
+main table thead th:nth-child(1) .sortable-header:hover,
+main table thead th:nth-child(2) .sortable-header:hover,
+main table thead th:nth-child(3) .sortable-header:hover {
+    color: #0056b3 !important;
+}
+
+.success {
+    color: green;
+}
+
+.error {
+    color: red;
+}
+
